@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="PermaDel.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:PermaDel.Controls">
+
+    <ScrollViewer>
+        <StackPanel MaxWidth="1000" Padding="32,20,32,32" Spacing="4">
+            <TextBlock Text="Settings" Style="{StaticResource TitleTextBlockStyle}" />
+
+            <TextBlock Text="Shredding" Style="{StaticResource SettingsSectionHeaderStyle}" />
+            <controls:SettingsCard
+                Glyph="&#xE74D;"
+                Header="Default overwrite passes"
+                Description="Used for new shred lists and marked as the default in the File Explorer menu">
+                <NumberBox
+                    x:Name="PassesBox"
+                    SmallChange="1"
+                    LargeChange="5"
+                    SpinButtonPlacementMode="Inline"
+                    ValidationMode="InvalidInputOverwritten"
+                    ValueChanged="OnPassesChanged"
+                    AutomationProperties.Name="Default overwrite passes" />
+            </controls:SettingsCard>
+            <controls:SettingsCard
+                Glyph="&#xE7BA;"
+                Header="Confirm before shredding"
+                Description="Ask before anything is destroyed, including when shredding from File Explorer">
+                <ToggleSwitch x:Name="ConfirmToggle" Toggled="OnConfirmToggled" AutomationProperties.Name="Confirm before shredding" />
+            </controls:SettingsCard>
+            <controls:SettingsCard
+                Glyph="&#xE72E;"
+                Header="Verify it's you before shredding"
+                Description="Ask for Windows Hello or your Windows account password, so nobody else at this PC can shred your files. Changing this setting also requires verification.">
+                <ToggleSwitch x:Name="VerificationToggle" Toggled="OnVerificationToggled" AutomationProperties.Name="Verify it's you before shredding" />
+            </controls:SettingsCard>
+            <InfoBar x:Name="VerificationStatus" Severity="Error" Title="Couldn't verify your identity" />
+
+            <TextBlock Text="File Explorer" Style="{StaticResource SettingsSectionHeaderStyle}" />
+            <controls:SettingsCard x:Name="ContextMenuCard" Glyph="&#xE8FD;" Header="Show “Shred with PermaDel” in the context menu">
+                <ToggleSwitch x:Name="ContextMenuToggle" Toggled="OnContextMenuToggled" AutomationProperties.Name="Show Shred with PermaDel in the context menu" />
+            </controls:SettingsCard>
+            <InfoBar x:Name="ContextMenuStatus" Severity="Error" Title="Couldn't update the File Explorer menu" />
+
+            <TextBlock Text="Appearance" Style="{StaticResource SettingsSectionHeaderStyle}" />
+            <controls:SettingsCard Glyph="&#xE790;" Header="App theme" Description="Select which theme PermaDel uses">
+                <ComboBox x:Name="ThemeBox" MinWidth="200" SelectionChanged="OnThemeChanged" AutomationProperties.Name="App theme">
+                    <ComboBoxItem Content="Use system setting" />
+                    <ComboBoxItem Content="Light" />
+                    <ComboBoxItem Content="Dark" />
+                </ComboBox>
+            </controls:SettingsCard>
+            <controls:SettingsCard Glyph="&#xE82F;" Header="Show the welcome screen" Description="Explain what PermaDel does and how to use it when it starts">
+                <ToggleSwitch x:Name="WelcomeToggle" Toggled="OnWelcomeToggled" AutomationProperties.Name="Show the welcome screen" />
+            </controls:SettingsCard>
+
+            <TextBlock Text="About" Style="{StaticResource SettingsSectionHeaderStyle}" />
+            <controls:SettingsCard x:Name="AboutCard" Glyph="&#xE946;" Header="PermaDel">
+                <StackPanel Orientation="Horizontal">
+                    <HyperlinkButton Content="Source code" NavigateUri="https://github.com/lukastojiljkovic/PermaDel" />
+                    <HyperlinkButton Content="Terms of Use" NavigateUri="https://github.com/lukastojiljkovic/PermaDel/blob/main/TERMS.md" />
+                    <HyperlinkButton Content="Privacy" NavigateUri="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md" />
+                </StackPanel>
+            </controls:SettingsCard>
+            <InfoBar
+                IsOpen="True"
+                IsClosable="False"
+                Severity="Warning"
+                Title="Shredding is permanent"
+                Message="Shredded files and folders can't be recovered. On SSDs and flash storage, overwriting can't guarantee that every copy of the data is destroyed." />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

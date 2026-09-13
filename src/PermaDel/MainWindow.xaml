@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="PermaDel.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="using:PermaDel.Core"
+    xmlns:models="using:PermaDel.Models"
+    Title="PermaDel">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root">
+        <Grid.Resources>
+            <DataTemplate x:Key="FailureTemplate" x:DataType="core:ShredFailure">
+                <StackPanel Padding="0,8" Spacing="2">
+                    <TextBlock Text="{x:Bind Path}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                    <TextBlock Text="{x:Bind Reason}" Style="{StaticResource SecondaryCaptionStyle}" TextWrapping="Wrap" />
+                </StackPanel>
+            </DataTemplate>
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TitleBar
+            x:Name="AppTitleBar"
+            Title="PermaDel"
+            IsBackButtonVisible="False"
+            IsPaneToggleButtonVisible="True"
+            PaneToggleRequested="OnPaneToggleRequested">
+            <TitleBar.IconSource>
+                <ImageIconSource ImageSource="/Assets/AppIcon.png" />
+            </TitleBar.IconSource>
+        </TitleBar>
+
+        <NavigationView
+            x:Name="NavView"
+            Grid.Row="1"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="True"
+            OpenPaneLength="240"
+            SelectionChanged="OnNavigationSelectionChanged">
+
+            <Grid x:Name="ShredView">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="400" />
+                    <ColumnDefinition Width="380" />
+                </Grid.ColumnDefinitions>
+
+                <InfoBar x:Name="StatusBar" Grid.ColumnSpan="2" Margin="16,12,16,0" />
+
+                <!-- File browser -->
+                <Grid Grid.Row="1" Padding="16,12,8,16" RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Same order and shortcuts as the File Explorer address bar -->
+                    <Grid ColumnSpacing="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button
+                            x:Name="BackButton"
+                            Style="{StaticResource IconButtonStyle}"
+                            IsEnabled="False"
+                            Click="OnBackClick"
+                            ToolTipService.ToolTip="Back"
+                            AutomationProperties.Name="Back">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Menu" Key="Left" />
+                            </Button.KeyboardAccelerators>
+                            <FontIcon Glyph="&#xE72B;" FontSize="14" />
+                        </Button>
+                        <Button
+                            x:Name="ForwardButton"
+                            Grid.Column="1"
+                            Style="{StaticResource IconButtonStyle}"
+                            IsEnabled="False"
+                            Click="OnForwardClick"
+                            ToolTipService.ToolTip="Forward"
+                            AutomationProperties.Name="Forward">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Menu" Key="Right" />
+                            </Button.KeyboardAccelerators>
+                            <FontIcon Glyph="&#xE72A;" FontSize="14" />
+                        </Button>
+                        <Button
+                            x:Name="UpButton"
+                            Grid.Column="2"
+                            Style="{StaticResource IconButtonStyle}"
+                            Click="OnUpClick"
+                            ToolTipService.ToolTip="Up to parent folder"
+                            AutomationProperties.Name="Up to parent folder">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Menu" Key="Up" />
+                            </Button.KeyboardAccelerators>
+                            <FontIcon Glyph="&#xE74A;" FontSize="14" />
+                        </Button>
+                        <Button
+                            Grid.Column="3"
+                            Style="{StaticResource IconButtonStyle}"
+                            Click="OnRefreshClick"
+                            ToolTipService.ToolTip="Refresh"
+                            AutomationProperties.Name="Refresh">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="F5" />
+                            </Button.KeyboardAccelerators>
+                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        </Button>
+                        <BreadcrumbBar
+                            x:Name="Breadcrumbs"
+                            Grid.Column="4"
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Center"
+                            ItemClicked="OnBreadcrumbClicked" />
+                    </Grid>
+
+                    <Grid Grid.Row="1" Padding="20,0,20,0" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="20" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="150" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" Text="Name" Style="{StaticResource SecondaryCaptionStyle}" />
+                        <TextBlock x:Name="ModifiedHeader" Grid.Column="2" Style="{StaticResource SecondaryCaptionStyle}" />
+                        <TextBlock x:Name="SizeHeader" Grid.Column="3" Style="{StaticResource SecondaryCaptionStyle}" HorizontalTextAlignment="Right" />
+                    </Grid>
+
+                    <ListView
+                        x:Name="BrowserList"
+                        Grid.Row="2"
+                        SelectionMode="Extended"
+                        ItemContainerStyle="{StaticResource StretchListViewItemStyle}"
+                        DoubleTapped="OnBrowserDoubleTapped"
+                        KeyDown="OnBrowserKeyDown"
+                        SelectionChanged="OnBrowserSelectionChanged">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:FileEntry">
+                                <Grid Height="36" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="20" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="140" />
+                                        <ColumnDefinition Width="150" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE8D5;" FontSize="16" Foreground="{StaticResource FolderFillBrush}" Visibility="{x:Bind IsFolder}" />
+                                    <FontIcon Glyph="{x:Bind Glyph}" FontSize="16" />
+                                    <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2" Text="{x:Bind ModifiedText}" VerticalAlignment="Center" Style="{StaticResource SecondaryCaptionStyle}" />
+                                    <TextBlock Grid.Column="3" Text="{x:Bind Details}" VerticalAlignment="Center" Style="{StaticResource SecondaryCaptionStyle}" HorizontalTextAlignment="Right" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <TextBlock
+                        x:Name="BrowserPlaceholder"
+                        Grid.Row="2"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Visibility="Collapsed" />
+
+                    <Grid Grid.Row="3">
+                        <TextBlock x:Name="SelectionText" VerticalAlignment="Center" Style="{StaticResource SecondaryCaptionStyle}" />
+                        <Button x:Name="AddButton" HorizontalAlignment="Right" IsEnabled="False" Click="OnAddClick">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                <TextBlock Text="Add to shred list" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Grid>
+
+                <!-- Shred list -->
+                <Grid
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Margin="8,12,16,16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource OverlayCornerRadius}"
+                    AllowDrop="True"
+                    DragOver="OnQueueDragOver"
+                    Drop="OnQueueDrop">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Padding="16,14,8,8">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Shred list" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock x:Name="QueueSummary" Style="{StaticResource SecondaryCaptionStyle}" />
+                        </StackPanel>
+                        <HyperlinkButton
+                            x:Name="ClearButton"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Content="Clear all"
+                            Click="OnClearQueueClick" />
+                    </Grid>
+
+                    <ListView
+                        x:Name="QueueList"
+                        Grid.Row="1"
+                        SelectionMode="None"
+                        ItemContainerStyle="{StaticResource StretchListViewItemStyle}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:FileEntry">
+                                <Grid Padding="0,6" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="20" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE8D5;" FontSize="16" Foreground="{StaticResource FolderFillBrush}" Visibility="{x:Bind IsFolder}" />
+                                    <FontIcon Glyph="{x:Bind Glyph}" FontSize="16" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind FullPath}">
+                                        <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind Location}" Style="{StaticResource SecondaryCaptionStyle}" />
+                                    </StackPanel>
+                                    <Button
+                                        Grid.Column="2"
+                                        Style="{StaticResource IconButtonStyle}"
+                                        Click="OnRemoveQueueItemClick"
+                                        ToolTipService.ToolTip="Remove from list"
+                                        AutomationProperties.Name="Remove from list">
+                                        <FontIcon Glyph="&#xE711;" FontSize="12" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel
+                        x:Name="QueuePlaceholder"
+                        Grid.Row="1"
+                        MaxWidth="260"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                        <FontIcon Glyph="&#xE74D;" FontSize="36" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                        <TextBlock Text="Nothing to shred yet" HorizontalTextAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock
+                            Text="Select files or folders and choose Add to shred list, or drag them here from File Explorer."
+                            HorizontalTextAlignment="Center"
+                            TextWrapping="Wrap"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+
+                    <StackPanel
+                        Grid.Row="2"
+                        Padding="16"
+                        Spacing="16"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="0,1,0,0">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Overwrite passes" />
+                                <TextBlock Text="Random data written per pass" Style="{StaticResource SecondaryCaptionStyle}" />
+                            </StackPanel>
+                            <NumberBox
+                                x:Name="PassesBox"
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                SmallChange="1"
+                                LargeChange="5"
+                                SpinButtonPlacementMode="Inline"
+                                ValidationMode="InvalidInputOverwritten"
+                                AutomationProperties.Name="Overwrite passes" />
+                        </Grid>
+
+                        <StackPanel x:Name="ProgressPanel" Spacing="6" Visibility="Collapsed">
+                            <Grid>
+                                <TextBlock Text="Shredding…" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBlock x:Name="ProgressPercent" HorizontalAlignment="Right" />
+                            </Grid>
+                            <ProgressBar x:Name="ShredProgressBar" Maximum="1" />
+                            <TextBlock x:Name="ProgressDetail" Style="{StaticResource SecondaryCaptionStyle}" />
+                        </StackPanel>
+
+                        <Button
+                            x:Name="ShredButton"
+                            HorizontalAlignment="Stretch"
+                            Style="{StaticResource AccentButtonStyle}"
+                            IsEnabled="False"
+                            Click="OnShredClick">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE74D;" FontSize="16" />
+                                <TextBlock Text="Shred permanently" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="CancelButton"
+                            HorizontalAlignment="Stretch"
+                            Content="Cancel"
+                            Visibility="Collapsed"
+                            Click="OnCancelClick" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </NavigationView>
+    </Grid>
+</Window>

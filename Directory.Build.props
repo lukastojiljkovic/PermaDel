@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Product>PermaDel</Product>
+    <Authors>Luka Stojiljkovic</Authors>
+    <Copyright>Copyright © 2026 Luka Stojiljkovic</Copyright>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>
