@@ -1,0 +1,28 @@
+# PermaDel
+
+> PermaDel is a free, open-source (MIT) secure file shredder for Windows 10 and 11. It overwrites files, folders and their NTFS alternate data streams with 1 to 35 passes of cryptographically secure random data, flushes every pass to disk, then truncates, renames and deletes them, so undelete and file-recovery tools can't bring them back. It's a native WinUI 3 app by Luka Stojiljković.
+
+Key facts:
+
+- Requires Windows 10 version 1809 or later, x64. The "Shred with PermaDel" File Explorer context menu requires Windows 11.
+- Optional Windows Hello or account password verification before shredding.
+- Refuses drive roots, system folders, user folders and its own folder, even through junctions, mapped drives or short names. Removes links and junctions without touching their targets; skips hard-linked and online-only cloud files.
+- Collects no data and doesn't connect to the internet.
+- Verified by 33 unit tests and a forensic test that scans a raw NTFS disk image after shredding.
+- Limits: no file-level shredder can guarantee destruction on SSDs or flash media, or of copies in shadow copies, backups or cloud sync.
+
+## Download
+
+- [Latest release](https://github.com/lukastojiljkovic/PermaDel/releases/latest): Windows installer, with its SHA-256 hash in the release notes
+
+## Documentation
+
+- [README](https://raw.githubusercontent.com/lukastojiljkovic/PermaDel/main/README.md): features, how it works, verification, limitations and building from source
+- [Changelog](https://raw.githubusercontent.com/lukastojiljkovic/PermaDel/main/CHANGELOG.md)
+- [Privacy statement](https://raw.githubusercontent.com/lukastojiljkovic/PermaDel/main/PRIVACY.md)
+- [Terms of use](https://raw.githubusercontent.com/lukastojiljkovic/PermaDel/main/TERMS.md)
+
+## Optional
+
+- [Source code](https://github.com/lukastojiljkovic/PermaDel)
+- [Author's portfolio](https://lukastojiljkovic.github.io/CV/)

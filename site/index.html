@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PermaDel: free secure file shredder for Windows 11 and 10</title>
+    <meta name="description" content="PermaDel overwrites files, folders and their alternate data streams with 1 to 35 passes of random data, then deletes them. Free, open-source file shredder for Windows with File Explorer integration.">
+    <meta name="author" content="Luka Stojiljković">
+    <link rel="canonical" href="https://lukastojiljkovic.github.io/PermaDel/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="PermaDel">
+    <meta property="og:title" content="PermaDel: secure file shredder for Windows">
+    <meta property="og:description" content="Overwrites files and their alternate data streams with random data, then deletes them. Free and open source.">
+    <meta property="og:url" content="https://lukastojiljkovic.github.io/PermaDel/">
+    <meta property="og:image" content="https://lukastojiljkovic.github.io/PermaDel/images/main.png">
+    <meta property="og:image:alt" content="PermaDel with four items in the shred list">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="preload" href="fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="site.css">
+    <style>:root { --app: #b3202f; --app-dark: #f2666e; }</style>
+
+    <script>
+        // Theme before first paint: the stored choice (shared with the portfolio), else the system setting.
+        try {
+            const t = localStorage.getItem('theme');
+            document.documentElement.dataset.theme = t === 'dark' || t === 'light' ? t
+                : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch (_) {}
+    </script>
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "SoftwareApplication",
+                "name": "PermaDel",
+                "description": "Secure file shredder for Windows. Overwrites files, folders and their NTFS alternate data streams with 1 to 35 passes of cryptographically secure random data, flushes every pass to disk, then truncates, renames and deletes them.",
+                "applicationCategory": "SecurityApplication",
+                "operatingSystem": "Windows 10 version 1809 or later, Windows 11",
+                "url": "https://lukastojiljkovic.github.io/PermaDel/",
+                "downloadUrl": "https://github.com/lukastojiljkovic/PermaDel/releases/latest",
+                "screenshot": "https://lukastojiljkovic.github.io/PermaDel/images/main.png",
+                "license": "https://github.com/lukastojiljkovic/PermaDel/blob/main/LICENSE",
+                "isAccessibleForFree": true,
+                "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+                "author": { "@type": "Person", "name": "Luka Stojiljković", "url": "https://lukastojiljkovic.github.io/CV/" },
+                "sameAs": ["https://github.com/lukastojiljkovic/PermaDel"]
+            },
+            {
+                "@type": "FAQPage",
+                "mainEntity": [
+                    { "@type": "Question", "name": "Is PermaDel free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. PermaDel is free and open source under the MIT License. It has no ads, accounts or telemetry." } },
+                    { "@type": "Question", "name": "Does PermaDel work on SSDs?", "acceptedAnswer": { "@type": "Answer", "text": "It overwrites and deletes files on any drive, but no file-level shredder can guarantee destruction on SSDs, NVMe or flash media: wear leveling, TRIM and over-provisioning can put an overwrite in different cells than the original data. For SSDs, use full-disk encryption such as BitLocker from the start, or the drive's secure erase command when you retire it." } },
+                    { "@type": "Question", "name": "How many passes should I use?", "acceptedAnswer": { "@type": "Answer", "text": "PermaDel uses 3 by default and allows 1 to 35. NIST SP 800-88 considers a single overwrite pass enough to clear data on modern hard drives. More passes take longer." } },
+                    { "@type": "Question", "name": "Why does Windows SmartScreen warn about the installer?", "acceptedAnswer": { "@type": "Answer", "text": "The installer isn't code-signed yet. Compare its SHA-256 hash with the one on the release page, then choose More info and Run anyway." } },
+                    { "@type": "Question", "name": "Why does setup ask for administrator approval?", "acceptedAnswer": { "@type": "Answer", "text": "The File Explorer context menu needs a package that only an administrator can register. PermaDel itself runs as your user." } },
+                    { "@type": "Question", "name": "Does PermaDel collect any data?", "acceptedAnswer": { "@type": "Answer", "text": "No. PermaDel doesn't connect to the internet. Its settings are stored in the Windows registry under HKEY_CURRENT_USER\\Software\\PermaDel." } }
+                ]
+            }
+        ]
+    }
+    </script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="bar">
+    <div class="bar-inner">
+        <a class="mark" href="#top"><img src="icon.png" alt="" width="24" height="24">PermaDel</a>
+        <nav class="nav" aria-label="Sections">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+            <a href="#limits">Limits</a>
+            <a href="#faq">FAQ</a>
+        </nav>
+        <div class="bar-actions">
+            <button class="theme" id="theme" type="button"><span class="theme-light">Dark</span><span class="theme-dark">Light</span></button>
+            <a class="btn btn-small" href="https://github.com/lukastojiljkovic/PermaDel">GitHub</a>
+            <a class="btn btn-small btn-primary" href="#download">Download</a>
+        </div>
+    </div>
+</header>
+
+<main id="main">
+    <section class="wrap hero" id="top">
+        <div class="hero-copy">
+            <p class="eyebrow">File shredder for <b>Windows</b></p>
+            <h1>Delete files so they stay deleted.</h1>
+            <p class="lede">PermaDel overwrites files and folders with random data, flushes every pass to disk, then deletes them, so undelete and file-recovery tools have nothing to bring back.</p>
+            <div class="actions">
+                <a class="btn btn-primary" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download for Windows</a>
+                <a class="btn" href="https://github.com/lukastojiljkovic/PermaDel">View the source</a>
+            </div>
+            <p class="fine">Free and open source (MIT) · Windows 10 1809+ x64 · Context menu on Windows 11</p>
+        </div>
+        <div class="hero-media">
+            <figure class="frame frame-shot">
+                <div class="frame-bar"><span>PermaDel</span><span>shred list · 4 items</span></div>
+                <img src="images/main.png" width="1166" height="793" alt="PermaDel's file browser with four items in the shred list, set to three overwrite passes" fetchpriority="high">
+            </figure>
+            <dl class="frame readout">
+                <div class="row"><dt>Passes</dt><dd>1 to 35, random data</dd></div>
+                <div class="row"><dt>Streams</dt><dd>Every NTFS data stream</dd></div>
+                <div class="row"><dt>Verification</dt><dd>Windows Hello or password</dd></div>
+                <div class="row"><dt>Data sent</dt><dd><b>None</b></dd></div>
+            </dl>
+        </div>
+    </section>
+
+    <section class="wrap section" id="features">
+        <h2 class="section-title">What it does</h2>
+        <p class="section-lede">Emptying the Recycle Bin only removes a file's entry. Its contents stay on the disk until something overwrites them. PermaDel does the overwriting, then removes the entry.</p>
+        <div class="cells">
+            <article class="cell">
+                <p class="cell-n">01</p>
+                <h3>Every byte, every stream</h3>
+                <p>Overwrites each file in place, including its NTFS alternate data streams, with random bytes from the Windows CSPRNG, and flushes every pass to the physical disk.</p>
+            </article>
+            <article class="cell">
+                <p class="cell-n">02</p>
+                <h3>No trace in the metadata</h3>
+                <p>Truncates each file to zero length, renames it to random names several times and resets its timestamps before deleting it.</p>
+            </article>
+            <article class="cell">
+                <p class="cell-n">03</p>
+                <h3>Shred from File Explorer</h3>
+                <p>Right-click files or folders and choose <b>Shred with PermaDel</b>. A submenu sets the number of passes and warns that the action is permanent.</p>
+            </article>
+            <article class="cell">
+                <p class="cell-n">04</p>
+                <h3>Checks it's you</h3>
+                <p>Optionally asks for Windows Hello or your account password before anything is shredded, so nobody else at an unlocked PC can use it.</p>
+            </article>
+            <article class="cell">
+                <p class="cell-n">05</p>
+                <h3>Refuses what it shouldn't touch</h3>
+                <p>Drive roots, Windows, Program Files, ProgramData, your user folders and PermaDel itself are refused, even when reached through a junction, a mapped drive or a short name.</p>
+            </article>
+            <article class="cell">
+                <p class="cell-n">06</p>
+                <h3>Leaves other data alone</h3>
+                <p>Links and junctions are removed without touching their targets. Hard-linked files and online-only OneDrive files are skipped instead of overwritten.</p>
+            </article>
+        </div>
+        <div class="screens">
+            <figure>
+                <img class="frame" src="images/confirm.png" width="1166" height="793" alt="A dialog asking to permanently shred four items with three passes" loading="lazy">
+                <figcaption><span>Fig. 1</span>Nothing is destroyed until you confirm. With verification on, Windows Hello asks next.</figcaption>
+            </figure>
+            <figure>
+                <img class="frame" src="images/settings.png" width="1166" height="793" alt="PermaDel's settings: default passes, confirmation, verification, context menu and theme" loading="lazy">
+                <figcaption><span>Fig. 2</span>Default passes, confirmation, identity verification and the context menu, all in Settings.</figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <section class="wrap section" id="how">
+        <h2 class="section-title">How it works</h2>
+        <p class="section-lede">PermaDel scans the whole selection before it changes anything. Then, for each file:</p>
+        <ol class="steps">
+            <li><div><h3>Clear attributes</h3><p>Read-only, hidden and system attributes are cleared. Files that can't be shredded keep their original attributes.</p></div></li>
+            <li><div><h3>Find every stream</h3><p><code>FindFirstStreamW</code> lists all data streams, including alternate data streams that File Explorer never shows.</p></div></li>
+            <li><div><h3>Overwrite</h3><p>Each stream is overwritten in place with random bytes, once per pass, and <code>FlushFileBuffers</code> pushes every pass to the disk.</p></div></li>
+            <li><div><h3>Erase the metadata</h3><p>The file is truncated to zero length, renamed to random names several times and its timestamps are reset.</p></div></li>
+            <li><div><h3>Delete</h3><p>The file is deleted. Folders are scrubbed and deleted once they are empty, and anything that couldn't be shredded is reported with the reason.</p></div></li>
+        </ol>
+    </section>
+
+    <section class="wrap section" id="limits">
+        <h2 class="section-title">Tested, and honest about limits</h2>
+        <div class="split">
+            <div>
+                <h3>How it's verified</h3>
+                <ul>
+                    <li><b>33 unit tests</b> cover long paths, lookalike names, junctions, hard links, locked files, online-only files and cancellation.</li>
+                    <li><b>A forensic test</b> shreds data on a raw NTFS virtual disk, then scans the disk image. No copy of the shredded contents remained.</li>
+                    <li><b>The original file name</b> remained only in the NTFS transaction log, which later file system activity overwrites.</li>
+                </ul>
+            </div>
+            <div>
+                <h3>What no file shredder can reach</h3>
+                <ul>
+                    <li><b>SSDs and flash media.</b> Wear leveling can put an overwrite in different cells. Use BitLocker from the start, or the drive's secure erase.</li>
+                    <li><b>Copies elsewhere</b>, such as shadow copies, backups, OneDrive, the page file and the hibernation file.</li>
+                    <li><b>File system journals.</b> The NTFS log and the USN journal can keep file names for a while.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="wrap section" id="faq">
+        <h2 class="section-title">Questions</h2>
+        <div class="faq">
+            <details><summary>Is PermaDel free?</summary><p>Yes. PermaDel is free and open source under the <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/LICENSE">MIT License</a>. It has no ads, accounts or telemetry.</p></details>
+            <details><summary>Does PermaDel work on SSDs?</summary><p>It overwrites and deletes files on any drive, but no file-level shredder can guarantee destruction on SSDs, NVMe or flash media: wear leveling, TRIM and over-provisioning can put an overwrite in different cells than the original data. For SSDs, use full-disk encryption such as BitLocker from the start, or the drive's secure erase command when you retire it.</p></details>
+            <details><summary>How many passes should I use?</summary><p>PermaDel uses 3 by default and allows 1 to 35. NIST SP 800-88 considers a single overwrite pass enough to clear data on modern hard drives. More passes take longer.</p></details>
+            <details><summary>Why does Windows SmartScreen warn about the installer?</summary><p>The installer isn't code-signed yet. Compare its SHA-256 hash with the one on the <a href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">release page</a> (<code>Get-FileHash</code> in PowerShell), then choose <b>More info</b> and <b>Run anyway</b>.</p></details>
+            <details><summary>Why does setup ask for administrator approval?</summary><p>The File Explorer context menu needs a package that only an administrator can register. PermaDel itself runs as your user.</p></details>
+            <details><summary>Does PermaDel collect any data?</summary><p>No. PermaDel doesn't connect to the internet. Its settings are stored in the Windows registry under <code>HKEY_CURRENT_USER\Software\PermaDel</code>. See the <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">privacy statement</a>.</p></details>
+        </div>
+    </section>
+
+    <section class="wrap get" id="download">
+        <div class="get-copy">
+            <h2>Get PermaDel</h2>
+            <p class="lede">The installer adds PermaDel to the Start menu and, on Windows 11, to the File Explorer context menu. Uninstall it from Settings, Apps, like any other app.</p>
+            <div class="actions">
+                <a class="btn btn-primary" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download the latest release</a>
+                <a class="btn" href="https://github.com/lukastojiljkovic/PermaDel#readme">Read the docs</a>
+            </div>
+        </div>
+        <dl>
+            <div><dt>Requires</dt><dd>Windows 10 version 1809 or later, x64</dd></div>
+            <div><dt>Context menu</dt><dd>Windows 11</dd></div>
+            <div><dt>License</dt><dd>MIT, source on GitHub</dd></div>
+            <div><dt>Verify</dt><dd>SHA-256 in the release notes</dd></div>
+        </dl>
+    </section>
+</main>
+
+<footer class="wrap">
+    <div class="foot">
+        <span>© 2026 <a href="https://lukastojiljkovic.github.io/CV/">Luka Stojiljković</a></span>
+        <nav aria-label="Legal">
+            <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/TERMS.md">Terms</a>
+            <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">Privacy</a>
+            <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/THIRD-PARTY-NOTICES.md">Third-party notices</a>
+            <a href="https://github.com/lukastojiljkovic/PermaDel/security/policy">Security</a>
+        </nav>
+        <p>Windows is a trademark of the Microsoft group of companies. PermaDel isn't affiliated with or endorsed by Microsoft.</p>
+    </div>
+</footer>
+
+<script>
+    (() => {
+        const root = document.documentElement;
+        const button = document.getElementById('theme');
+        const sync = () => button.setAttribute('aria-label', `Switch to ${root.dataset.theme === 'dark' ? 'light' : 'dark'} theme`);
+        sync();
+        button.addEventListener('click', () => {
+            root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+            try { localStorage.setItem('theme', root.dataset.theme); } catch (_) {}
+            sync();
+        });
+    })();
+</script>
+</body>
+</html>

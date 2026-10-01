@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Format, test, build and installer
+    # The File Explorer extension builds with the Visual Studio 2026 C++ toolset (v145). The image also has the
+    # Windows SDK for MakeAppx and Inno Setup 6.
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Check formatting
+        run: dotnet format PermaDel.sln --verify-no-changes
+
+      # Tests, self-contained publish, third-party licenses, File Explorer extension, sparse package and installer.
+      - name: Build
+        run: .\build.ps1
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer
+          path: artifacts/installer/*.exe
+          if-no-files-found: error
+
+      # The context menu task registers a sparse package with File Explorer, so it is checked on a desktop PC instead.
+      - name: Install and uninstall silently
+        run: |
+          $setup = (Get-ChildItem artifacts\installer\*.exe).FullName
+          $app = "$env:ProgramFiles\PermaDel"
+          $install = Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=verification' -Wait -PassThru
+          if ($install.ExitCode) { throw "Setup failed with exit code $($install.ExitCode)." }
+          foreach ($file in 'PermaDel.exe', 'PermaDel.ShellExtension.dll', 'LICENSE.txt', 'TERMS.md', 'PRIVACY.md', 'THIRD-PARTY-NOTICES.md', 'licenses') {
+            if (-not (Test-Path "$app\$file")) { throw "Setup didn't install $file." }
+          }
+          if (-not (Get-ChildItem "$app\licenses")) { throw 'The licenses folder is empty.' }
+          if ((Get-ItemProperty HKCU:\Software\PermaDel).RequireVerification -ne 1) { throw "Setup didn't turn on verification." }
+          Write-Host "Installed $((Get-ChildItem $app -Recurse -File).Count) files."
+
+          # The uninstaller hands over to a copy of itself and returns right away, so wait for the app folder to go.
+          Start-Process "$app\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+          $deadline = (Get-Date).AddMinutes(2)
+          while ((Test-Path $app) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 1 }
+          if (Test-Path $app) { throw "The uninstaller left $app behind." }
+          if (Test-Path HKCU:\Software\PermaDel) { throw 'The uninstaller left the settings behind.' }
+          Write-Host 'Uninstalled cleanly.'

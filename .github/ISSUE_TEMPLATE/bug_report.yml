@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in PermaDel doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For a security problem, follow the [security policy](https://github.com/lukastojiljkovic/PermaDel/security/policy) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead? If shredding failed, include the report PermaDel showed.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Describe the kind of item, such as a folder with a junction or a OneDrive file, not its real name.
+      placeholder: |
+        1. Add a folder that contains a junction
+        2. Shred it with 3 passes
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: permadel-version
+    attributes:
+      label: PermaDel version
+      description: Settings > About
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: Run `winver`
+      placeholder: Windows 11 Pro, version 25H2, build 26200
+    validations:
+      required: true

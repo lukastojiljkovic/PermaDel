@@ -1,7 +1,13 @@
 # PermaDel
 
+[![CI](https://github.com/lukastojiljkovic/PermaDel/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lukastojiljkovic/PermaDel/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/lukastojiljkovic/PermaDel)](https://github.com/lukastojiljkovic/PermaDel/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 PermaDel securely shreds files and folders on Windows, so they can't be brought back with undelete or file-recovery
 tools. It's a native Windows 11 app built with WinUI 3 and the Windows App SDK.
+
+![PermaDel with four items in the shred list](docs/images/main.png)
 
 ## Download
 
@@ -52,6 +58,10 @@ the download, compare its SHA-256 hash with the one on the release page, then ch
   - A welcome screen explains what the app does, and a confirmation dialog appears before anything is destroyed.
 - **Transparent.** Live progress with cancellation, plus a report listing every item that couldn't be shredded and why.
 
+By default, PermaDel asks before anything is destroyed, and checks it's you when verification is on:
+
+![The confirmation before shredding](docs/images/confirm.png)
+
 ## How it works
 
 PermaDel first scans every selected item, walking directory trees children-first. Then, for each file, it:
@@ -87,6 +97,8 @@ you, and the toggle in Settings asks for approval (UAC) when you change it.
   `LogonUser`. It confirms that the password belongs to the account running PermaDel (by SID), then erases the password
   from memory.
 - **Accounts without a password:** there is nothing to verify.
+
+![PermaDel's settings](docs/images/settings.png)
 
 Verification stops someone at an unlocked PC from misusing PermaDel. It isn't a security boundary: that person could
 still delete files with other tools or change PermaDel's settings in the registry.
