@@ -19,8 +19,8 @@
 
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
-    <link rel="preload" href="fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="site.css">
+    <link rel="preload" href="fonts/ls-sans.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="site.css?v=2">
     <style>:root { --app: #b3202f; --app-dark: #f2666e; }</style>
 
     <script>
@@ -88,28 +88,26 @@
 
 <main id="main">
     <section class="wrap hero" id="top">
-        <div class="hero-copy">
-            <p class="eyebrow">File shredder for <b>Windows</b></p>
+        <div class="hero-head">
             <h1>Delete files so they stay deleted.</h1>
-            <p class="lede">PermaDel overwrites files and folders with random data, flushes every pass to disk, then deletes them, so undelete and file-recovery tools have nothing to bring back.</p>
-            <div class="actions">
-                <a class="btn btn-primary" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download for Windows</a>
-                <a class="btn" href="https://github.com/lukastojiljkovic/PermaDel">View the source</a>
+            <div class="hero-copy">
+                <p class="lede">PermaDel overwrites files and folders with random data, flushes every pass to disk, then deletes them, so undelete and file-recovery tools have nothing to bring back.</p>
+                <div class="actions">
+                    <a class="btn btn-primary" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download for Windows</a>
+                    <a class="btn" href="https://github.com/lukastojiljkovic/PermaDel">View the source</a>
+                </div>
+                <p class="fine">Free and open source (MIT). Windows 10 1809+, x64, with the context menu on Windows 11.</p>
             </div>
-            <p class="fine">Free and open source (MIT) · Windows 10 1809+ x64 · Context menu on Windows 11</p>
         </div>
-        <div class="hero-media">
-            <figure class="frame frame-shot">
-                <div class="frame-bar"><span>PermaDel</span><span>shred list · 4 items</span></div>
-                <img src="images/main.png" width="1166" height="793" alt="PermaDel's file browser with four items in the shred list, set to three overwrite passes" fetchpriority="high">
-            </figure>
-            <dl class="frame readout">
-                <div class="row"><dt>Passes</dt><dd>1 to 35, random data</dd></div>
-                <div class="row"><dt>Streams</dt><dd>Every NTFS data stream</dd></div>
-                <div class="row"><dt>Verification</dt><dd>Windows Hello or password</dd></div>
-                <div class="row"><dt>Data sent</dt><dd><b>None</b></dd></div>
-            </dl>
+        <div class="desk desk-hero">
+            <img class="win" src="images/main.png" width="1166" height="793" alt="PermaDel's file browser with four items in the shred list, set to three overwrite passes" fetchpriority="high">
         </div>
+        <dl class="readout">
+            <div class="row"><dt>Passes</dt><dd>1 to 35, random data</dd></div>
+            <div class="row"><dt>Streams</dt><dd>Every NTFS data stream</dd></div>
+            <div class="row"><dt>Verification</dt><dd>Windows Hello or password</dd></div>
+            <div class="row"><dt>Data sent</dt><dd><b>None</b></dd></div>
+        </dl>
     </section>
 
     <section class="wrap section" id="features">
@@ -117,44 +115,42 @@
         <p class="section-lede">Emptying the Recycle Bin only removes a file's entry. Its contents stay on the disk until something overwrites them. PermaDel does the overwriting, then removes the entry.</p>
         <div class="cells">
             <article class="cell">
-                <p class="cell-n">01</p>
                 <h3>Every byte, every stream</h3>
                 <p>Overwrites each file in place, including its NTFS alternate data streams, with random bytes from the Windows CSPRNG, and flushes every pass to the physical disk.</p>
             </article>
             <article class="cell">
-                <p class="cell-n">02</p>
                 <h3>No trace in the metadata</h3>
                 <p>Truncates each file to zero length, renames it to random names several times and resets its timestamps before deleting it.</p>
             </article>
             <article class="cell">
-                <p class="cell-n">03</p>
                 <h3>Shred from File Explorer</h3>
                 <p>Right-click files or folders and choose <b>Shred with PermaDel</b>. A submenu sets the number of passes and warns that the action is permanent.</p>
             </article>
             <article class="cell">
-                <p class="cell-n">04</p>
                 <h3>Checks it's you</h3>
                 <p>Optionally asks for Windows Hello or your account password before anything is shredded, so nobody else at an unlocked PC can use it.</p>
             </article>
             <article class="cell">
-                <p class="cell-n">05</p>
                 <h3>Refuses what it shouldn't touch</h3>
                 <p>Drive roots, Windows, Program Files, ProgramData, your user folders and PermaDel itself are refused, even when reached through a junction, a mapped drive or a short name.</p>
             </article>
             <article class="cell">
-                <p class="cell-n">06</p>
                 <h3>Leaves other data alone</h3>
                 <p>Links and junctions are removed without touching their targets. Hard-linked files and online-only OneDrive files are skipped instead of overwritten.</p>
             </article>
         </div>
         <div class="screens">
             <figure>
-                <img class="frame" src="images/confirm.png" width="1166" height="793" alt="A dialog asking to permanently shred four items with three passes" loading="lazy">
-                <figcaption><span>Fig. 1</span>Nothing is destroyed until you confirm. With verification on, Windows Hello asks next.</figcaption>
+                <div class="desk">
+                    <img class="win" src="images/confirm.png" width="1166" height="793" alt="A dialog asking to permanently shred four items with three passes" loading="lazy">
+                </div>
+                <figcaption>Nothing is destroyed until you confirm. With verification on, Windows Hello asks next.</figcaption>
             </figure>
             <figure>
-                <img class="frame" src="images/settings.png" width="1166" height="793" alt="PermaDel's settings: default passes, confirmation, verification, context menu and theme" loading="lazy">
-                <figcaption><span>Fig. 2</span>Default passes, confirmation, identity verification and the context menu, all in Settings.</figcaption>
+                <div class="desk">
+                    <img class="win" src="images/settings.png" width="1166" height="793" alt="PermaDel's settings: default passes, confirmation, verification, context menu and theme" loading="lazy">
+                </div>
+                <figcaption>Default passes, confirmation, identity verification and the context menu, all in Settings.</figcaption>
             </figure>
         </div>
     </section>
@@ -162,7 +158,7 @@
     <section class="wrap section" id="how">
         <h2 class="section-title">How it works</h2>
         <p class="section-lede">PermaDel scans the whole selection before it changes anything. Then, for each file:</p>
-        <ol class="steps">
+        <ol class="steps steps-seq">
             <li><div><h3>Clear attributes</h3><p>Read-only, hidden and system attributes are cleared. Files that can't be shredded keep their original attributes.</p></div></li>
             <li><div><h3>Find every stream</h3><p><code>FindFirstStreamW</code> lists all data streams, including alternate data streams that File Explorer never shows.</p></div></li>
             <li><div><h3>Overwrite</h3><p>Each stream is overwritten in place with random bytes, once per pass, and <code>FlushFileBuffers</code> pushes every pass to the disk.</p></div></li>
