@@ -19,8 +19,8 @@
 
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
-    <link rel="preload" href="fonts/ls-sans.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="site.css?v=2">
+    <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="site.css?v=3">
     <style>:root { --app: #b3202f; --app-dark: #f2666e; }</style>
 
     <script>
@@ -69,38 +69,44 @@
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
-<header class="bar">
-    <div class="bar-inner">
-        <a class="mark" href="#top"><img src="icon.png" alt="" width="24" height="24">PermaDel</a>
-        <nav class="nav" aria-label="Sections">
-            <a href="#features">Features</a>
-            <a href="#how">How it works</a>
-            <a href="#limits">Limits</a>
-            <a href="#faq">FAQ</a>
-        </nav>
-        <div class="bar-actions">
-            <button class="theme" id="theme" type="button"><span class="theme-light">Dark</span><span class="theme-dark">Light</span></button>
-            <a class="btn btn-small" href="https://github.com/lukastojiljkovic/PermaDel">GitHub</a>
-            <a class="btn btn-small btn-primary" href="#download">Download</a>
+<!-- The title band: what the app does, and the download -->
+<header class="band" id="top">
+    <div class="wrap band-grid">
+        <div class="topline">
+            <a class="mark" href="#top"><img src="icon.png" alt="" width="24" height="24">PermaDel</a>
+            <nav class="nav" aria-label="Sections">
+                <a href="#features">Features</a>
+                <a href="#how">How it works</a>
+                <a href="#limits">Limits</a>
+                <a href="#faq">FAQ</a>
+            </nav>
+            <div class="topline-actions">
+                <a href="https://github.com/lukastojiljkovic/PermaDel">GitHub</a>
+                <button type="button" id="theme"><span class="theme-light">Dark</span><span class="theme-dark">Light</span></button>
+            </div>
+        </div>
+
+        <div class="title">
+            <h1>Delete files so they stay deleted.</h1>
+            <p class="sub">PermaDel overwrites files and folders with random data, flushes every pass to disk, then deletes them, so undelete and file-recovery tools have nothing to bring back.</p>
+        </div>
+
+        <div class="get-it">
+            <p class="free">Free and open source</p>
+            <p class="where">MIT License. Windows 10 1809+, x64, with the context menu on Windows 11.</p>
+            <div class="band-actions">
+                <a class="btn btn-app" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download for Windows</a>
+                <a class="btn btn-line" href="https://github.com/lukastojiljkovic/PermaDel">View the source</a>
+            </div>
         </div>
     </div>
 </header>
 
 <main id="main">
-    <section class="wrap hero" id="top">
-        <div class="hero-head">
-            <h1>Delete files so they stay deleted.</h1>
-            <div class="hero-copy">
-                <p class="lede">PermaDel overwrites files and folders with random data, flushes every pass to disk, then deletes them, so undelete and file-recovery tools have nothing to bring back.</p>
-                <div class="actions">
-                    <a class="btn btn-primary" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download for Windows</a>
-                    <a class="btn" href="https://github.com/lukastojiljkovic/PermaDel">View the source</a>
-                </div>
-                <p class="fine">Free and open source (MIT). Windows 10 1809+, x64, with the context menu on Windows 11.</p>
-            </div>
-        </div>
-        <div class="desk desk-hero">
-            <img class="win" src="images/main.png" width="1166" height="793" alt="PermaDel's file browser with four items in the shred list, set to three overwrite passes" fetchpriority="high">
+    <!-- The app on a plate of its colour, beside what it does at a glance -->
+    <section class="wrap grid lead">
+        <div class="plate plate-hero">
+            <img src="images/main.png" width="1166" height="793" alt="PermaDel's file browser with four items in the shred list, set to three overwrite passes" fetchpriority="high">
         </div>
         <dl class="readout">
             <div class="row"><dt>Passes</dt><dd>1 to 35, random data</dd></div>
@@ -110,7 +116,7 @@
         </dl>
     </section>
 
-    <section class="wrap section" id="features">
+    <section class="wrap grid section" id="features">
         <h2 class="section-title">What it does</h2>
         <p class="section-lede">Emptying the Recycle Bin only removes a file's entry. Its contents stay on the disk until something overwrites them. PermaDel does the overwriting, then removes the entry.</p>
         <div class="cells">
@@ -141,21 +147,21 @@
         </div>
         <div class="screens">
             <figure>
-                <div class="desk">
-                    <img class="win" src="images/confirm.png" width="1166" height="793" alt="A dialog asking to permanently shred four items with three passes" loading="lazy">
+                <div class="plate">
+                    <img src="images/confirm.png" width="1166" height="793" alt="A dialog asking to permanently shred four items with three passes" loading="lazy">
                 </div>
                 <figcaption>Nothing is destroyed until you confirm. With verification on, Windows Hello asks next.</figcaption>
             </figure>
             <figure>
-                <div class="desk">
-                    <img class="win" src="images/settings.png" width="1166" height="793" alt="PermaDel's settings: default passes, confirmation, verification, context menu and theme" loading="lazy">
+                <div class="plate">
+                    <img src="images/settings.png" width="1166" height="793" alt="PermaDel's settings: default passes, confirmation, verification, context menu and theme" loading="lazy">
                 </div>
                 <figcaption>Default passes, confirmation, identity verification and the context menu, all in Settings.</figcaption>
             </figure>
         </div>
     </section>
 
-    <section class="wrap section" id="how">
+    <section class="wrap grid section" id="how">
         <h2 class="section-title">How it works</h2>
         <p class="section-lede">PermaDel scans the whole selection before it changes anything. Then, for each file:</p>
         <ol class="steps steps-seq">
@@ -167,7 +173,7 @@
         </ol>
     </section>
 
-    <section class="wrap section" id="limits">
+    <section class="wrap grid section" id="limits">
         <h2 class="section-title">Tested, and honest about limits</h2>
         <div class="split">
             <div>
@@ -189,7 +195,7 @@
         </div>
     </section>
 
-    <section class="wrap section" id="faq">
+    <section class="wrap grid section" id="faq">
         <h2 class="section-title">Questions</h2>
         <div class="faq">
             <details><summary>Is PermaDel free?</summary><p>Yes. PermaDel is free and open source under the <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/LICENSE">MIT License</a>. It has no ads, accounts or telemetry.</p></details>
@@ -200,35 +206,35 @@
             <details><summary>Does PermaDel collect any data?</summary><p>No. PermaDel doesn't connect to the internet. Its settings are stored in the Windows registry under <code>HKEY_CURRENT_USER\Software\PermaDel</code>. See the <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">privacy statement</a>.</p></details>
         </div>
     </section>
+</main>
 
-    <section class="wrap get" id="download">
+<!-- The closing band mirrors the title band: the download, then the small print -->
+<footer class="band band-close" id="download">
+    <div class="wrap band-grid">
         <div class="get-copy">
-            <h2>Get PermaDel</h2>
-            <p class="lede">The installer adds PermaDel to the Start menu and, on Windows 11, to the File Explorer context menu. Uninstall it from Settings, Apps, like any other app.</p>
-            <div class="actions">
-                <a class="btn btn-primary" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download the latest release</a>
-                <a class="btn" href="https://github.com/lukastojiljkovic/PermaDel#readme">Read the docs</a>
+            <h2 class="close-title">Get PermaDel</h2>
+            <p class="sub">The installer adds PermaDel to the Start menu and, on Windows 11, to the File Explorer context menu. Uninstall it from Settings, Apps, like any other app.</p>
+            <div class="band-actions">
+                <a class="btn btn-app" href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">Download the latest release</a>
+                <a class="btn btn-line" href="https://github.com/lukastojiljkovic/PermaDel#readme">Read the docs</a>
             </div>
         </div>
-        <dl>
+        <dl class="get-facts">
             <div><dt>Requires</dt><dd>Windows 10 version 1809 or later, x64</dd></div>
             <div><dt>Context menu</dt><dd>Windows 11</dd></div>
             <div><dt>License</dt><dd>MIT, source on GitHub</dd></div>
             <div><dt>Verify</dt><dd>SHA-256 in the release notes</dd></div>
         </dl>
-    </section>
-</main>
-
-<footer class="wrap">
-    <div class="foot">
-        <span>© 2026 <a href="https://lukastojiljkovic.github.io/CV/">Luka Stojiljković</a></span>
-        <nav aria-label="Legal">
-            <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/TERMS.md">Terms</a>
-            <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">Privacy</a>
-            <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/THIRD-PARTY-NOTICES.md">Third-party notices</a>
-            <a href="https://github.com/lukastojiljkovic/PermaDel/security/policy">Security</a>
-        </nav>
-        <p>Windows is a trademark of the Microsoft group of companies. PermaDel isn't affiliated with or endorsed by Microsoft.</p>
+        <div class="foot">
+            <span>© 2026 <a href="https://lukastojiljkovic.github.io/CV/">Luka Stojiljković</a></span>
+            <nav aria-label="Legal">
+                <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/TERMS.md">Terms</a>
+                <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">Privacy</a>
+                <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/THIRD-PARTY-NOTICES.md">Third-party notices</a>
+                <a href="https://github.com/lukastojiljkovic/PermaDel/security/policy">Security</a>
+            </nav>
+            <p>Windows is a trademark of the Microsoft group of companies. PermaDel isn't affiliated with or endorsed by Microsoft.</p>
+        </div>
     </div>
 </footer>
 
