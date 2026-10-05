@@ -5,6 +5,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- PermaDel checks GitHub for a newer release when it starts (at most once a day) and from Settings, shows a banner with
+  the release notes when one exists, and installs it after verifying the installer against the SHA-256 checksum
+  published with the release. The automatic check can be turned off.
+
 ## [1.0.0] - 2026-09-13
 
 The first release.

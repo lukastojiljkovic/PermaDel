@@ -2,7 +2,7 @@
 
 # PermaDel Terms of Use
 
-Last updated: 13 September 2026
+Last updated: 5 October 2026
 
 These terms apply to the PermaDel application and installer published at
 https://github.com/lukastojiljkovic/PermaDel. PermaDel's source code is licensed under the MIT License (LICENSE).
@@ -61,7 +61,8 @@ PermaDel isn't affiliated with or endorsed by Microsoft. Windows is a trademark 
 
 ## 7. Privacy
 
-PermaDel doesn't collect, store or send personal data. See PRIVACY.md.
+PermaDel doesn't collect, store or send personal data. The only network request it makes itself is the update check
+against GitHub; see PRIVACY.md.
 
 ## 8. Changes
 

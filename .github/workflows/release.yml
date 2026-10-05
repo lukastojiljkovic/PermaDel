@@ -63,8 +63,15 @@ jobs:
           Set-Content release-notes.md $notes -Encoding utf8
           Get-Content release-notes.md
 
+      - name: Write the checksum file
+        run: |
+          $setup = Get-Item artifacts\installer\*.exe
+          Set-Content "$($setup.FullName).sha256" -Encoding ascii -NoNewline -Value "$((Get-FileHash $setup -Algorithm SHA256).Hash)  $($setup.Name)"
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
-        run: gh release create $env:GITHUB_REF_NAME (Get-Item artifacts\installer\*.exe).FullName --title "PermaDel $env:VERSION" --notes-file release-notes.md --verify-tag
+        run: |
+          $setup = Get-Item artifacts\installer\*.exe
+          gh release create $env:GITHUB_REF_NAME $setup.FullName "$($setup.FullName).sha256" --title "PermaDel $env:VERSION" --notes-file release-notes.md --verify-tag
