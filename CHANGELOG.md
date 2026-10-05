@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-05
+
 ### Added
 
 - PermaDel checks GitHub for a newer release when it starts (at most once a day) and from Settings, shows a banner with
@@ -28,5 +30,6 @@ The first release.
   would normalize are never confused with other items.
 - A welcome screen, light and dark themes, and settings for the defaults.
 
-[Unreleased]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/lukastojiljkovic/PermaDel/releases/tag/v1.0.0

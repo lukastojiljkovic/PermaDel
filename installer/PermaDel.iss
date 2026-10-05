@@ -1,7 +1,7 @@
 ; Inno Setup script for PermaDel. Built by build.ps1 from the self-contained publish output.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.1.0"
 #endif
 
 #define AppName "PermaDel"
