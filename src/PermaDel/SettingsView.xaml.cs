@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using PermaDel.Core;
+using PermaDel.Core.Updates;
 using PermaDel.Services;
 
 namespace PermaDel;
@@ -9,12 +10,15 @@ namespace PermaDel;
 public sealed partial class SettingsView : UserControl
 {
     private readonly nint _window;
+    private readonly UpdateCoordinator _updates;
     private bool _updating = true;
 
     /// <param name="window">The main window, which owns the identity verification prompt.</param>
-    public SettingsView(nint window)
+    /// <param name="updates">The window's update coordinator, for the manual check and its status.</param>
+    internal SettingsView(nint window, UpdateCoordinator updates)
     {
         _window = window;
+        _updates = updates;
         InitializeComponent();
 
         PassesBox.Minimum = Shredder.MinPasses;
@@ -24,6 +28,8 @@ public sealed partial class SettingsView : UserControl
         VerificationToggle.IsOn = AppSettings.RequireVerification;
         ThemeBox.SelectedIndex = (int)AppSettings.Theme;
         WelcomeToggle.IsOn = AppSettings.ShowWelcome;
+        AutoUpdateToggle.IsOn = AppSettings.CheckForUpdatesAutomatically;
+        UpdateStatusText.Text = $"Version {updates.CurrentVersion.ToString(3)}";
         AboutCard.Description = $"Version {typeof(App).Assembly.GetName().Version?.ToString(3)} · MIT License · © 2026 Luka Stojiljkovic";
 
         _updating = false;
@@ -33,6 +39,9 @@ public sealed partial class SettingsView : UserControl
     public event EventHandler<int>? DefaultPassesChanged;
 
     public event EventHandler<ElementTheme>? ThemeChanged;
+
+    /// <summary>Raised when the manual check finds a newer release, so the window can show its banner.</summary>
+    public event EventHandler<ReleaseInfo>? UpdateAvailable;
 
     /// <summary>Re-reads the registration, which can also change outside the app (for example via the installer).</summary>
     public void RefreshContextMenuState()
@@ -102,6 +111,36 @@ public sealed partial class SettingsView : UserControl
     {
         if (!_updating)
             AppSettings.ShowWelcome = WelcomeToggle.IsOn;
+    }
+
+    private void OnAutoUpdateToggled(object sender, RoutedEventArgs e)
+    {
+        if (!_updating)
+            AppSettings.CheckForUpdatesAutomatically = AutoUpdateToggle.IsOn;
+    }
+
+    private async void OnCheckNowClick(object sender, RoutedEventArgs e)
+    {
+        CheckNowButton.IsEnabled = false;
+        UpdateStatusText.Text = "Checking…";
+        try
+        {
+            var result = await _updates.Service.CheckAsync(manual: true);
+            UpdateStatusText.Text = result.Status switch
+            {
+                UpdateCheckStatus.UpToDate => "PermaDel is up to date.",
+                UpdateCheckStatus.UpdateAvailable => $"PermaDel {result.Release!.Version.ToString(3)} is available.",
+                UpdateCheckStatus.NoReleases => "No releases have been published yet.",
+                UpdateCheckStatus.RateLimited => "GitHub's rate limit was reached. Try again later.",
+                _ => $"Could not check for updates: {result.Detail}",
+            };
+            if (result is { Status: UpdateCheckStatus.UpdateAvailable, Release: { } release })
+                UpdateAvailable?.Invoke(this, release);
+        }
+        finally
+        {
+            CheckNowButton.IsEnabled = true;
+        }
     }
 
     private async void OnContextMenuToggled(object sender, RoutedEventArgs e)

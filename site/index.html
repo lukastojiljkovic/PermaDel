@@ -59,7 +59,7 @@
                     { "@type": "Question", "name": "How many passes should I use?", "acceptedAnswer": { "@type": "Answer", "text": "PermaDel uses 3 by default and allows 1 to 35. NIST SP 800-88 considers a single overwrite pass enough to clear data on modern hard drives. More passes take longer." } },
                     { "@type": "Question", "name": "Why does Windows SmartScreen warn about the installer?", "acceptedAnswer": { "@type": "Answer", "text": "The installer isn't code-signed yet. Compare its SHA-256 hash with the one on the release page, then choose More info and Run anyway." } },
                     { "@type": "Question", "name": "Why does setup ask for administrator approval?", "acceptedAnswer": { "@type": "Answer", "text": "The File Explorer context menu needs a package that only an administrator can register. PermaDel itself runs as your user." } },
-                    { "@type": "Question", "name": "Does PermaDel collect any data?", "acceptedAnswer": { "@type": "Answer", "text": "No. PermaDel doesn't connect to the internet. Its settings are stored in the Windows registry under HKEY_CURRENT_USER\\Software\\PermaDel." } }
+                    { "@type": "Question", "name": "Does PermaDel collect any data?", "acceptedAnswer": { "@type": "Answer", "text": "No. PermaDel collects nothing. The only request it makes itself is the update check, which asks GitHub for the latest release and sends nothing but its version number. Its settings are stored in the Windows registry under HKEY_CURRENT_USER\\Software\\PermaDel." } }
                 ]
             }
         ]
@@ -206,7 +206,7 @@
             <details><summary>How many passes should I use?</summary><p>PermaDel uses 3 by default and allows 1 to 35. NIST SP 800-88 considers a single overwrite pass enough to clear data on modern hard drives. More passes take longer.</p></details>
             <details><summary>Why does Windows SmartScreen warn about the installer?</summary><p>The installer isn't code-signed yet. Compare its SHA-256 hash with the one on the <a href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">release page</a> (<code>Get-FileHash</code> in PowerShell), then choose <b>More info</b> and <b>Run anyway</b>.</p></details>
             <details><summary>Why does setup ask for administrator approval?</summary><p>The File Explorer context menu needs a package that only an administrator can register. PermaDel itself runs as your user.</p></details>
-            <details><summary>Does PermaDel collect any data?</summary><p>No. PermaDel doesn't connect to the internet. Its settings are stored in the Windows registry under <code>HKEY_CURRENT_USER\Software\PermaDel</code>. See the <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">privacy statement</a>.</p></details>
+            <details><summary>Does PermaDel collect any data?</summary><p>No. PermaDel collects nothing. The only request it makes itself is the update check, which asks GitHub for the latest release and sends nothing but its version number. Its settings are stored in the Windows registry under <code>HKEY_CURRENT_USER\Software\PermaDel</code>. See the <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">privacy statement</a>.</p></details>
         </div>
     </section>
 </main>

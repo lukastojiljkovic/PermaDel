@@ -55,6 +55,23 @@
                 <ToggleSwitch x:Name="WelcomeToggle" Toggled="OnWelcomeToggled" AutomationProperties.Name="Show the welcome screen" />
             </controls:SettingsCard>
 
+            <TextBlock Text="Updates" Style="{StaticResource SettingsSectionHeaderStyle}" />
+            <controls:SettingsCard
+                Glyph="&#xE895;"
+                Header="Check for updates automatically"
+                Description="Ask GitHub for the latest release when PermaDel starts, at most once a day">
+                <ToggleSwitch x:Name="AutoUpdateToggle" Toggled="OnAutoUpdateToggled" AutomationProperties.Name="Check for updates automatically" />
+            </controls:SettingsCard>
+            <controls:SettingsCard
+                Glyph="&#xE896;"
+                Header="Update check"
+                Description="Check now for a newer release">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBlock x:Name="UpdateStatusText" VerticalAlignment="Center" />
+                    <Button x:Name="CheckNowButton" Content="Check now" Click="OnCheckNowClick" />
+                </StackPanel>
+            </controls:SettingsCard>
+
             <TextBlock Text="About" Style="{StaticResource SettingsSectionHeaderStyle}" />
             <controls:SettingsCard x:Name="AboutCard" Glyph="&#xE946;" Header="PermaDel">
                 <StackPanel Orientation="Horizontal">

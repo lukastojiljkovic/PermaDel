@@ -202,7 +202,7 @@ build.ps1                    Test, publish and package pipeline
 ## Legal
 
 - [Terms of Use](TERMS.md). The installer asks you to accept them.
-- [Privacy statement](PRIVACY.md). PermaDel collects no data.
+- [Privacy statement](PRIVACY.md). PermaDel collects no data; the only request it makes itself is the update check.
 - [Third-party notices](THIRD-PARTY-NOTICES.md)
 
 Shredded data can't be recovered, and that is the point of this tool. Double-check your selection before you confirm.

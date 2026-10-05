@@ -49,6 +49,7 @@
             <Grid x:Name="ShredView">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -56,10 +57,24 @@
                     <ColumnDefinition Width="380" />
                 </Grid.ColumnDefinitions>
 
-                <InfoBar x:Name="StatusBar" Grid.ColumnSpan="2" Margin="16,12,16,0" />
+                <InfoBar
+                    x:Name="UpdateBar"
+                    Grid.ColumnSpan="2"
+                    Margin="16,12,16,0"
+                    Severity="Informational"
+                    IsClosable="True"
+                    CloseButtonClick="OnUpdateBarClosed">
+                    <InfoBar.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                            <Button x:Name="UpdateNotesButton" Content="What's new" Click="OnUpdateNotesClick" />
+                            <Button x:Name="UpdateInstallButton" Content="Update" Style="{StaticResource AccentButtonStyle}" Click="OnUpdateInstallClick" />
+                        </StackPanel>
+                    </InfoBar.Content>
+                </InfoBar>
+                <InfoBar x:Name="StatusBar" Grid.Row="1" Grid.ColumnSpan="2" Margin="16,12,16,0" />
 
                 <!-- File browser -->
-                <Grid Grid.Row="1" Padding="16,12,8,16" RowSpacing="8">
+                <Grid Grid.Row="2" Padding="16,12,8,16" RowSpacing="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -192,7 +207,7 @@
 
                 <!-- Shred list -->
                 <Grid
-                    Grid.Row="1"
+                    Grid.Row="2"
                     Grid.Column="1"
                     Margin="8,12,16,16"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
