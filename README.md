@@ -7,7 +7,10 @@
 PermaDel securely shreds files and folders on Windows, so they can't be brought back with undelete or file-recovery
 tools. It's a native Windows 11 app built with WinUI 3 and the Windows App SDK.
 
-![PermaDel with four items in the shred list](docs/images/main.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/main-dark.png">
+  <img src="docs/images/main-light.png" alt="PermaDel with four items in the shred list">
+</picture>
 
 ## Download
 
@@ -60,7 +63,10 @@ the download, compare its SHA-256 hash with the one on the release page, then ch
 
 By default, PermaDel asks before anything is destroyed, and checks it's you when verification is on:
 
-![The confirmation before shredding](docs/images/confirm.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/confirm-dark.png">
+  <img src="docs/images/confirm-light.png" alt="The confirmation before shredding">
+</picture>
 
 ## How it works
 
@@ -98,7 +104,10 @@ you, and the toggle in Settings asks for approval (UAC) when you change it.
   from memory.
 - **Accounts without a password:** there is nothing to verify.
 
-![PermaDel's settings](docs/images/settings.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-dark.png">
+  <img src="docs/images/settings-light.png" alt="PermaDel's settings">
+</picture>
 
 Verification stops someone at an unlocked PC from misusing PermaDel. It isn't a security boundary: that person could
 still delete files with other tools or change PermaDel's settings in the registry.
