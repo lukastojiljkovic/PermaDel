@@ -7,6 +7,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using PermaDel.Core;
+using PermaDel.Core.Updates;
+using PermaDel.Dialogs;
 using PermaDel.Models;
 using PermaDel.Services;
 using Windows.ApplicationModel.DataTransfer;
@@ -36,6 +38,8 @@ public sealed partial class MainWindow : Window
     private int _navigationVersion;
     private bool _syncingNavigation;
     private CancellationTokenSource? _cancellation;
+    private ReleaseInfo? _availableRelease;
+    private CancellationTokenSource? _updateDownload;
 
     /// <param name="request">Items to shred right away, when PermaDel was started from the File Explorer context menu.</param>
     public MainWindow(ShredRequest? request = null)
@@ -50,9 +54,13 @@ public sealed partial class MainWindow : Window
         PassesBox.Value = request?.Passes ?? AppSettings.DefaultPasses;
         QueueList.ItemsSource = _queue;
         _queue.CollectionChanged += (_, _) => UpdateCommands();
+        Updates = new UpdateCoordinator();
+        Updates.Checked += OnUpdateChecked;
         Root.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnRootPointerPressed), handledEventsToo: true);
         Root.Loaded += async (_, _) =>
         {
+            // The check runs in the background; the window is never delayed.
+            _ = Updates.CheckOnStartupAsync();
             try
             {
                 await InitializeAsync();
@@ -65,6 +73,8 @@ public sealed partial class MainWindow : Window
 
         UpdateCommands();
     }
+
+    internal UpdateCoordinator Updates { get; }
 
     private enum History { Record, Back, Forward, Keep }
 
@@ -225,8 +235,9 @@ public sealed partial class MainWindow : Window
     {
         if (_settingsView is null)
         {
-            _settingsView = new SettingsView(WindowHandle);
+            _settingsView = new SettingsView(WindowHandle, Updates);
             _settingsView.ThemeChanged += (_, theme) => ApplyTheme(theme);
+            _settingsView.UpdateAvailable += (_, release) => ShowUpdateAvailable(release);
             _settingsView.DefaultPassesChanged += (_, passes) =>
             {
                 if (!IsBusy)
@@ -515,6 +526,7 @@ public sealed partial class MainWindow : Window
     {
         _cancellation = cancellation;
         var busy = cancellation is not null;
+        RefreshUpdateActions();
 
         ProgressPanel.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         CancelButton.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
@@ -545,7 +557,123 @@ public sealed partial class MainWindow : Window
         StatusBar.Title = title;
         StatusBar.Message = message;
         StatusBar.ActionButton = action;
+        StatusBar.Content = null;
         StatusBar.IsOpen = true;
+    }
+
+    /// <summary>The startup check's result. Only a newer version opens the bar.</summary>
+    private void OnUpdateChecked(object? sender, UpdateCheckResult result)
+    {
+        if (result is { Status: UpdateCheckStatus.UpdateAvailable, Release: { } release })
+            ShowUpdateAvailable(release);
+    }
+
+    internal void ShowUpdateAvailable(ReleaseInfo release)
+    {
+        _availableRelease = release;
+        UpdateBar.Title = $"PermaDel {release.Version.ToString(3)} is available";
+        UpdateBar.Message = $"You are running PermaDel {Updates.CurrentVersion.ToString(3)}.";
+        UpdateBar.IsOpen = true;
+        RefreshUpdateActions();
+    }
+
+    /// <summary>An update cannot start while a shred is in progress.</summary>
+    private void RefreshUpdateActions() =>
+        UpdateInstallButton.IsEnabled = !IsBusy && _updateDownload is null;
+
+    private void OnUpdateBarClosed(InfoBar sender, object args) => _availableRelease = null;
+
+    private async void OnUpdateNotesClick(object sender, RoutedEventArgs e)
+    {
+        if (_availableRelease is { } release)
+            await UpdateDialogs.ShowReleaseNotesAsync(Root.XamlRoot, Root.ActualTheme, release);
+    }
+
+    private async void OnUpdateInstallClick(object sender, RoutedEventArgs e)
+    {
+        if (_availableRelease is { } release)
+            await DownloadUpdateAsync(release);
+    }
+
+    /// <summary>
+    /// Downloads the release's installer, verifies it against its checksum, then
+    /// starts it and closes the window. Progress and cancel use the status bar,
+    /// so no modal has to be dismissed when the work finishes.
+    /// </summary>
+    private async Task DownloadUpdateAsync(ReleaseInfo release)
+    {
+        if (IsBusy)
+        {
+            ShowStatus(InfoBarSeverity.Warning, "PermaDel is busy", "Wait for the current shred to finish before updating.");
+            return;
+        }
+        if (_updateDownload is not null)
+            return;
+
+        using var cancellation = new CancellationTokenSource();
+        _updateDownload = cancellation;
+        RefreshUpdateActions();
+
+        var progressBar = new ProgressBar { Width = 220, IsIndeterminate = true, VerticalAlignment = VerticalAlignment.Center };
+        var percent = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Text = "0%" };
+        var cancel = new Button { Content = "Cancel" };
+        cancel.Click += (_, _) => cancellation.Cancel();
+        StatusBar.Severity = InfoBarSeverity.Informational;
+        StatusBar.Title = $"Downloading PermaDel {release.Version.ToString(3)}\u2026";
+        StatusBar.Message = "PermaDel verifies the installer before it runs it.";
+        StatusBar.Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 12,
+            Children = { progressBar, percent, cancel },
+        };
+        StatusBar.IsOpen = true;
+
+        var progress = new Progress<UpdateProgress>(update =>
+        {
+            if (update.TotalBytes is not > 0)
+                return;
+            progressBar.IsIndeterminate = false;
+            progressBar.Value = Math.Clamp(100.0 * update.BytesReceived / update.TotalBytes.Value, 0, 100);
+            percent.Text = $"{progressBar.Value:0}%";
+        });
+
+        UpdateDownloadResult result;
+        try
+        {
+            result = await Updates.Service.DownloadAsync(release, cancellation.Token, progress);
+        }
+        catch (OperationCanceledException)
+        {
+            ShowStatus(InfoBarSeverity.Informational, "Update cancelled", "PermaDel is unchanged.");
+            return;
+        }
+        finally
+        {
+            _updateDownload = null;
+            StatusBar.Content = null;
+            RefreshUpdateActions();
+        }
+
+        StatusBar.IsOpen = false;
+        if (!result.Success)
+        {
+            await UpdateDialogs.ShowUpdateFailureAsync(Root.XamlRoot, Root.ActualTheme, result.Error ?? "The installer could not be downloaded.", result.ReleasePageUrl);
+            return;
+        }
+
+        switch (await Updates.Service.InstallAsync(result, CancellationToken.None))
+        {
+            case InstallOutcome.Started:
+                Close();
+                break;
+            case InstallOutcome.Cancelled:
+                ShowStatus(InfoBarSeverity.Informational, "Update cancelled", "Windows did not get permission to run the installer.");
+                break;
+            default:
+                await UpdateDialogs.ShowUpdateFailureAsync(Root.XamlRoot, Root.ActualTheme, "The installer could not be started.", release.PageUrl);
+                break;
+        }
     }
 
     private static string Pluralize(int count, string noun) => $"{count:N0} {noun}{(count == 1 ? string.Empty : "s")}";
