@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-07
+
 ### Fixed
 
 - Uninstalling PermaDel removes `%LOCALAPPDATA%\PermaDel\Updates`, where an update installer that was
@@ -35,6 +37,7 @@ The first release.
   would normalize are never confused with other items.
 - A welcome screen, light and dark themes, and settings for the defaults.
 
-[Unreleased]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/lukastojiljkovic/PermaDel/releases/tag/v1.0.0
