@@ -1,6 +1,6 @@
 # PermaDel Privacy Statement
 
-Last updated: 5 October 2026
+Last updated: 7 October 2026
 
 PermaDel doesn't collect, store or send personal data. It has no accounts, telemetry, analytics, crash reporting or
 ads. The only request PermaDel makes on its own is the update check described below.
@@ -13,6 +13,9 @@ ads. The only request PermaDel makes on its own is the update check described be
   - With Windows Hello, PermaDel only learns whether verification succeeded.
   - With the password prompt, the password goes to Windows for checking and is then erased from PermaDel's memory. It's
     never stored or sent anywhere.
+- **An update download**, only when you choose to update: the installer is saved in `%LOCALAPPDATA%\PermaDel\Updates`
+  until it is run. The next download removes the previous file. Uninstalling PermaDel leaves this folder in place; it
+  can be deleted by hand.
 - **Links** to GitHub open in your web browser, where GitHub's privacy statement applies.
 - **Microsoft components.** The Microsoft Windows App SDK included with PermaDel may collect diagnostic information as
   described in its license terms (in the `licenses` folder) and the Microsoft Privacy Statement at
