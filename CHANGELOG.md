@@ -5,6 +5,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Uninstalling PermaDel removes `%LOCALAPPDATA%\PermaDel\Updates`, where an update installer that was
+  downloaded but never run used to stay behind.
+
 ## [1.1.0] - 2026-10-05
 
 ### Added

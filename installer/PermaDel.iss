@@ -76,3 +76,8 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; F
 
 [UninstallRun]
 Filename: "{app}\{#AppExeName}"; Parameters: "--unregister-shell"; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterShellExtension"
+
+[UninstallDelete]
+; An update installer that was downloaded but never run (PRIVACY.md), for the account that runs the uninstaller.
+Type: filesandordirs; Name: "{localappdata}\{#AppName}\Updates"
+Type: dirifempty; Name: "{localappdata}\{#AppName}"
