@@ -204,6 +204,11 @@ build.ps1                    Test, publish and package pipeline
 - [Terms of Use](TERMS.md). The installer asks you to accept them.
 - [Privacy statement](PRIVACY.md). PermaDel collects no data; the only request it makes itself is the update check.
 - [Third-party notices](THIRD-PARTY-NOTICES.md)
+- [Contributing](CONTRIBUTING.md): how to build, test and change the shredder safely
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Support](SUPPORT.md): where to ask
+- [Product](PRODUCT.md): what PermaDel is for and who it is for
+- [Design](DESIGN.md): the visual design system
 
 Shredded data can't be recovered, and that is the point of this tool. Double-check your selection before you confirm.
 The software is provided "as is", without warranty of any kind.
