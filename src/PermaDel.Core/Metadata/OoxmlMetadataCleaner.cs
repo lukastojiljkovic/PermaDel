@@ -24,6 +24,14 @@ internal static class OoxmlMetadataCleaner
     private const string CustomPropertiesRelationship = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties";
     private const string CustomPropertiesContentType = "application/vnd.openxmlformats-officedocument.custom-properties+xml";
 
+    /// <summary>
+    /// The most PermaDel reads of one part into memory. A small file can hold a part that expands to gigabytes,
+    /// and no picture or property part in a real document comes close.
+    /// </summary>
+    internal const int MaxBufferedLength = 256 * 1024 * 1024;
+
+    private static readonly string[] PictureExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+
     private static readonly XNamespace CoreProperties = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     private static readonly XNamespace DublinCore = "http://purl.org/dc/elements/1.1/";
     private static readonly XNamespace ExtendedProperties = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties";
@@ -115,10 +123,7 @@ internal static class OoxmlMetadataCleaner
     /// <summary>A picture pasted into a document keeps its own metadata, such as where a photo was taken.</summary>
     private static void InspectPicture(ZipArchiveEntry entry, FoundMetadata found)
     {
-        using var picture = new MemoryStream();
-        using (var stream = entry.Open())
-            stream.CopyTo(picture);
-
+        using var picture = Buffer(entry);
         var inspection = MetadataCleaner.Inspect(picture, fileName: null);
         foreach (var category in inspection.Categories)
             found.Add(category);
@@ -126,11 +131,10 @@ internal static class OoxmlMetadataCleaner
             found.NeedsRotation = true;
     }
 
-    /// <summary>Cleans a JPEG, PNG or WebP picture; any other kind of picture is copied as it was.</summary>
+    /// <summary>Cleans a JPEG, PNG or WebP picture; one whose contents are not what its name says is copied as it was.</summary>
     private static void CleanPicture(Stream input, Stream output)
     {
-        using var picture = new MemoryStream();
-        input.CopyTo(picture);
+        using var picture = Buffer(input);
         var format = MetadataCleaner.Detect(picture, fileName: null);
         picture.Position = 0;
         if (format == MetadataFormat.Unsupported)
@@ -155,9 +159,7 @@ internal static class OoxmlMetadataCleaner
             return;
         }
 
-        using var buffer = new MemoryStream();
-        input.CopyTo(buffer);
-        buffer.Position = 0;
+        using var buffer = Buffer(input);
         XDocument document;
         try
         {
@@ -237,8 +239,30 @@ internal static class OoxmlMetadataCleaner
     {
         if (FindEntry(archive, name) is not { } entry)
             return null;
-        using var stream = entry.Open();
+        using var stream = Buffer(entry);
         return XDocument.Load(stream);
+    }
+
+    private static MemoryStream Buffer(ZipArchiveEntry entry)
+    {
+        using var stream = entry.Open();
+        return Buffer(stream);
+    }
+
+    /// <summary>Reads a part into memory, refusing one that expands past <see cref="MaxBufferedLength"/>.</summary>
+    private static MemoryStream Buffer(Stream input)
+    {
+        var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = input.Read(chunk)) > 0)
+        {
+            if (buffer.Length + read > MaxBufferedLength)
+                throw new InvalidDataException("A part of the document is too large to read.");
+            buffer.Write(chunk, 0, read);
+        }
+        buffer.Position = 0;
+        return buffer;
     }
 
     private static string? Value(XDocument document, XName name) => document.Root?.Element(name)?.Value;
@@ -249,8 +273,13 @@ internal static class OoxmlMetadataCleaner
 
     private static bool IsCustomPartName(string? partName) => partName is not null && IsPart(partName, CustomPart);
 
-    /// <summary>Word, Excel and PowerPoint keep pictures in a <c>media</c> folder: <c>word/media/image1.jpeg</c>.</summary>
-    private static bool IsPicture(string name) => name.Replace('\\', '/').Contains("/media/", StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Word, Excel and PowerPoint keep pictures, videos and sounds in a <c>media</c> folder and name each for its
+    /// type, such as <c>word/media/image1.jpeg</c>. Only the pictures PermaDel can clean are read.
+    /// </summary>
+    private static bool IsPicture(string name) =>
+        name.Replace('\\', '/').Contains("/media/", StringComparison.OrdinalIgnoreCase)
+        && PictureExtensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase);
 
     private static ZipArchiveEntry? FindEntry(ZipArchive archive, string name) =>
         archive.Entries.FirstOrDefault(entry => IsPart(entry.FullName, name));

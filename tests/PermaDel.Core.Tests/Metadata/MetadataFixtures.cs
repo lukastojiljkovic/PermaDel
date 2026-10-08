@@ -99,6 +99,21 @@ internal static class MetadataFixtures
         return package.ToArray();
     }
 
+    /// <summary>An Office package whose picture expands to <paramref name="length"/> zero bytes but stays small on disk.</summary>
+    public static byte[] DocxWithExpandingPicture(long length)
+    {
+        using var package = new MemoryStream();
+        using (var archive = new ZipArchive(package, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            Add(archive, "[Content_Types].xml", ContentTypes(withMetadata: false));
+            var chunk = new byte[1024 * 1024];
+            using var stream = archive.CreateEntry(PicturePart).Open();
+            for (long written = 0; written < length; written += chunk.Length)
+                stream.Write(chunk, 0, (int)Math.Min(chunk.Length, length - written));
+        }
+        return package.ToArray();
+    }
+
     /// <summary>The decompressed bytes of one part of an Office package, or null when the package has no such part.</summary>
     public static byte[]? ReadPart(byte[] package, string name)
     {

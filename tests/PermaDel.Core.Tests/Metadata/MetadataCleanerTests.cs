@@ -306,6 +306,15 @@ public sealed class MetadataCleanerTests
     }
 
     [Fact]
+    public void Docx_RefusesAPictureThatExpandsPastTheLimit()
+    {
+        var package = MetadataFixtures.DocxWithExpandingPicture(OoxmlMetadataCleaner.MaxBufferedLength + 1L);
+
+        Assert.Equal(MetadataFormat.Unsupported, Inspect(package, "report.docx").Format);
+        Assert.Throws<InvalidDataException>(() => Clean(package, "report.docx"));
+    }
+
+    [Fact]
     public void Docx_CopiesPicturesItCannotCleanAsTheyAre()
     {
         var drawing = "not a photo"u8.ToArray();
