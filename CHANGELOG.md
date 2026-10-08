@@ -5,6 +5,29 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-08
+
+PermaDel can now do more than shred: wipe a drive's free space so files you deleted the ordinary way can't be read back, and remove the hidden details that photos and Office files carry, such as where a photo was taken, the camera, the author and the company. It also tells you what changed after it updates, in plain words.
+
+### Added
+
+- **Wipe free space** on a drive in This PC: PermaDel writes random data over all of the drive's free space and then
+  removes it, so files you deleted the ordinary way can't be read back. Your existing files are never touched. On NTFS
+  it can also fill the file table's free entries, where small files live. The wipe files are removed even when the wipe
+  is cancelled or fails, and any that a crash left behind are removed the next time PermaDel starts.
+- **Remove metadata** from a JPEG, PNG or WebP photo, or a Word, Excel or PowerPoint file: PermaDel shows what the file
+  holds, then writes a cleaned copy next to it or replaces the original. Pictures inside Office files are cleaned too.
+  A file is only written once the cleaned version passes a check, so one that can't be cleaned safely is left as it
+  was.
+- PermaDel shows what changed when it updates: the first time you open a new version, it shows that version's notes,
+  once. Opening PermaDel from the File Explorer menu never interrupts you with them.
+
+### Changed
+
+- The update notice and the release notes are now written for the people who use the app. **What's new** shows just
+  the changes, grouped into New, Improved and Fixed, with the release date and the full notes a click away, and offers
+  **Update now**.
+
 ## [1.1.1] - 2026-10-07
 
 ### Fixed
@@ -37,7 +60,8 @@ The first release.
   would normalize are never confused with other items.
 - A welcome screen, light and dark themes, and settings for the defaults.
 
-[Unreleased]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/lukastojiljkovic/PermaDel/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.1.1...v2.0.0
 [1.1.1]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/lukastojiljkovic/PermaDel/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/lukastojiljkovic/PermaDel/releases/tag/v1.0.0

@@ -1,12 +1,13 @@
 # PermaDel Privacy Statement
 
-Last updated: 7 October 2026
+Last updated: 8 October 2026
 
 PermaDel doesn't collect, store or send personal data. It has no accounts, telemetry, analytics, crash reporting or
 ads. The only request PermaDel makes on its own is the update check described below.
 
-- **Your files stay on your PC.** PermaDel only works with the files and folders you select. Their names and contents
-  are never sent anywhere.
+- **Your files stay on your PC.** PermaDel only works with the files, folders and drives you select, and only on your
+  own PC. To shred a file or remove its metadata it reads the file's contents, and it writes cleaned copies or wipe
+  data on the same PC. Nothing about your files is sent anywhere.
 - **Settings** are stored locally in the Windows registry under `HKEY_CURRENT_USER\Software\PermaDel`. Uninstalling
   PermaDel removes them.
 - **Identity verification** is carried out by Windows:

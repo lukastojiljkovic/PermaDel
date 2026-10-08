@@ -2,7 +2,7 @@
 
 # PermaDel Terms of Use
 
-Last updated: 5 October 2026
+Last updated: 8 October 2026
 
 These terms apply to the PermaDel application and installer published at
 https://github.com/lukastojiljkovic/PermaDel. PermaDel's source code is licensed under the MIT License (LICENSE).
@@ -15,6 +15,10 @@ By installing or using PermaDel, you agree to these terms. If you don't agree, d
 PermaDel overwrites the files and folders you select with random data and then deletes them. This is irreversible by
 design. Shredded data can't be restored by PermaDel, by its author or by any recovery service.
 
+PermaDel can also wipe a drive's free space, writing random data over the space that files deleted the ordinary way used
+to occupy, and remove metadata from the photos and Office files you select, either writing a cleaned copy next to the
+original or replacing it. Removing metadata does not destroy the original data by itself.
+
 ## 2. Your responsibility
 
 - You decide what to shred. Check your selection before you confirm, and keep backups of anything you might need.
@@ -25,7 +29,8 @@ design. Shredded data can't be restored by PermaDel, by its author or by any rec
 
 ## 3. No guarantee of complete destruction
 
-PermaDel works at the file level. Copies of data can survive outside the file it overwrites, for example:
+Shredding works at the file level, and wiping free space reaches only a drive's free space. Copies of data can survive
+outside the file or the space PermaDel overwrites, for example:
 
 - on SSDs and flash storage (wear leveling, TRIM, over-provisioning)
 - in Volume Shadow Copies, System Restore points and backups

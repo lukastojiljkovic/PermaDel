@@ -39,7 +39,7 @@
             {
                 "@type": "SoftwareApplication",
                 "name": "PermaDel",
-                "description": "Secure file shredder for Windows. Overwrites files, folders and their NTFS alternate data streams with 1 to 35 passes of cryptographically secure random data, flushes every pass to disk, then truncates, renames and deletes them.",
+                "description": "Secure file shredder for Windows. Overwrites files, folders and their NTFS alternate data streams with 1 to 35 passes of cryptographically secure random data, flushes every pass to disk, then truncates, renames and deletes them. It can also wipe a drive's free space, so files deleted the ordinary way can't be recovered, and remove metadata from photos and Office files.",
                 "applicationCategory": "SecurityApplication",
                 "operatingSystem": "Windows 10 version 1809 or later, Windows 11",
                 "url": "https://lukastojiljkovic.github.io/PermaDel/",
@@ -59,7 +59,10 @@
                     { "@type": "Question", "name": "How many passes should I use?", "acceptedAnswer": { "@type": "Answer", "text": "PermaDel uses 3 by default and allows 1 to 35. NIST SP 800-88 considers a single overwrite pass enough to clear data on modern hard drives. More passes take longer." } },
                     { "@type": "Question", "name": "Why does Windows SmartScreen warn about the installer?", "acceptedAnswer": { "@type": "Answer", "text": "The installer isn't code-signed yet. Compare its SHA-256 hash with the one on the release page, then choose More info and Run anyway." } },
                     { "@type": "Question", "name": "Why does setup ask for administrator approval?", "acceptedAnswer": { "@type": "Answer", "text": "The File Explorer context menu needs a package that only an administrator can register. PermaDel itself runs as your user." } },
-                    { "@type": "Question", "name": "Does PermaDel collect any data?", "acceptedAnswer": { "@type": "Answer", "text": "No. PermaDel collects nothing. The only request it makes itself is the update check, which asks GitHub for the latest release and sends nothing but its version number. Its settings are stored in the Windows registry under HKEY_CURRENT_USER\\Software\\PermaDel." } }
+                    { "@type": "Question", "name": "Does PermaDel collect any data?", "acceptedAnswer": { "@type": "Answer", "text": "No. PermaDel collects nothing. The only request it makes itself is the update check, which asks GitHub for the latest release and sends nothing but its version number. Its settings are stored in the Windows registry under HKEY_CURRENT_USER\\Software\\PermaDel." } },
+                    { "@type": "Question", "name": "Can PermaDel wipe a drive's free space?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Select a drive in This PC and choose Wipe free space, or right-click it. PermaDel writes random data over all of the drive's free space and removes it again, so files deleted the ordinary way can't be read back. Existing files are never touched. On NTFS it can also fill the file table's free entries, where small files live. On an SSD or flash drive the drive decides where writes land, so some deleted data can still survive; BitLocker from the start is the reliable protection." } },
+                    { "@type": "Question", "name": "Can PermaDel remove metadata from photos and documents?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, for JPEG, PNG and WebP photos and for Word, Excel and PowerPoint files. PermaDel shows you what it found, then writes a cleaned copy next to the file or replaces the original; pictures inside Office files are cleaned too. Comments and tracked changes are document content and are left as they are, so remove them in the Office app first. A photo that relied on its orientation tag may show sideways in some apps." } },
+                    { "@type": "Question", "name": "Does PermaDel show what changed after an update?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. When a new version arrives, the what's new dialog shows the changes in plain words, grouped into New, Improved and Fixed, with a link to the full notes. After PermaDel updates itself, the next time you open it, it shows what changed in the new version once. Opening PermaDel from the File Explorer menu never shows it." } }
                 ]
             }
         ]
@@ -119,7 +122,7 @@
 
     <section class="wrap grid section" id="features">
         <h2 class="section-title">What it does</h2>
-        <p class="section-lede">Emptying the Recycle Bin only removes a file's entry. Its contents stay on the disk until something overwrites them. PermaDel does the overwriting, then removes the entry.</p>
+        <p class="section-lede">Emptying the Recycle Bin only removes a file's entry. Its contents stay on the disk until something overwrites them. PermaDel does the overwriting, then removes the entry, and it can wipe a drive's free space so files you deleted earlier can't be recovered either.</p>
         <div class="cells">
             <article class="cell">
                 <h3>Every byte, every stream</h3>
@@ -144,6 +147,18 @@
             <article class="cell">
                 <h3>Leaves other data alone</h3>
                 <p>Links and junctions are removed without touching their targets. Hard-linked files and online-only OneDrive files are skipped instead of overwritten.</p>
+            </article>
+            <article class="cell">
+                <h3>Wipe a drive's free space</h3>
+                <p>On a drive in This PC, PermaDel writes random data over all of the drive's free space and removes it again, so files deleted the ordinary way can't be read back. Existing files are never touched. On NTFS it can also fill the file table's free entries.</p>
+            </article>
+            <article class="cell">
+                <h3>Remove the details photos and documents carry</h3>
+                <p>See where a photo was taken, which camera took it, or who wrote a Word, Excel or PowerPoint file, then write a cleaned copy next to it or replace the original. Pictures inside Office files are cleaned too.</p>
+            </article>
+            <article class="cell">
+                <h3>Know what changed</h3>
+                <p>When a new version arrives, PermaDel shows what changed in plain words, grouped into New, Improved and Fixed. After it updates, it shows what changed once, the next time you open it.</p>
             </article>
         </div>
         <div class="screens">
@@ -182,7 +197,7 @@
             <div>
                 <h3>How it's verified</h3>
                 <ul>
-                    <li><b>33 unit tests</b> cover long paths, lookalike names, junctions, hard links, locked files, online-only files and cancellation.</li>
+                    <li><b>172 unit tests</b> cover long paths, lookalike names, junctions, hard links, locked files, online-only files, cancellation, free-space wiping and metadata removal.</li>
                     <li><b>A forensic test</b> shreds data on a raw NTFS virtual disk, then scans the disk image. No copy of the shredded contents remained.</li>
                     <li><b>The original file name</b> remained only in the NTFS transaction log, which later file system activity overwrites.</li>
                 </ul>
@@ -193,6 +208,8 @@
                     <li><b>SSDs and flash media.</b> Wear leveling can put an overwrite in different cells. Use BitLocker from the start, or the drive's secure erase.</li>
                     <li><b>Copies elsewhere</b>, such as shadow copies, backups, OneDrive, the page file and the hibernation file.</li>
                     <li><b>File system journals.</b> The NTFS log and the USN journal can keep file names for a while.</li>
+                    <li><b>Wiping free space.</b> A wipe reaches only what a new file can be written over: on an SSD or flash drive the drive decides where writes land, and older copies in restore points or shadow copies, and the unused tail of existing files, are still in use. It is offered only on fixed and removable drives formatted NTFS, exFAT or FAT32.</li>
+                    <li><b>Removing metadata.</b> Only JPEG, PNG and WebP photos and Word, Excel and PowerPoint files; inside Office files only the pictures are cleaned, and comments, tracked changes and other embedded files such as videos are left as they are. Removing a photo's orientation tag can make it show sideways in some apps, a document part larger than 256 MB is not read so the file is left as it was, and replacing an original leaves its old bytes in the drive's free space until Windows reuses them.</li>
                 </ul>
             </div>
         </div>
@@ -207,6 +224,9 @@
             <details><summary>Why does Windows SmartScreen warn about the installer?</summary><p>The installer isn't code-signed yet. Compare its SHA-256 hash with the one on the <a href="https://github.com/lukastojiljkovic/PermaDel/releases/latest">release page</a> (<code>Get-FileHash</code> in PowerShell), then choose <b>More info</b> and <b>Run anyway</b>.</p></details>
             <details><summary>Why does setup ask for administrator approval?</summary><p>The File Explorer context menu needs a package that only an administrator can register. PermaDel itself runs as your user.</p></details>
             <details><summary>Does PermaDel collect any data?</summary><p>No. PermaDel collects nothing. The only request it makes itself is the update check, which asks GitHub for the latest release and sends nothing but its version number. Its settings are stored in the Windows registry under <code>HKEY_CURRENT_USER\Software\PermaDel</code>. See the <a href="https://github.com/lukastojiljkovic/PermaDel/blob/main/PRIVACY.md">privacy statement</a>.</p></details>
+            <details><summary>Can PermaDel wipe a drive's free space?</summary><p>Yes. Select a drive in This PC and choose <b>Wipe free space</b>, or right-click it. PermaDel writes random data over all of the drive's free space and removes it again, so files deleted the ordinary way can't be read back. Existing files are never touched. On NTFS it can also fill the file table's free entries, where small files live. On an SSD or flash drive the drive decides where writes land, so some deleted data can still survive; BitLocker from the start is the reliable protection.</p></details>
+            <details><summary>Can PermaDel remove metadata from photos and documents?</summary><p>Yes, for JPEG, PNG and WebP photos and for Word, Excel and PowerPoint files. PermaDel shows you what it found, then writes a cleaned copy next to the file or replaces the original; pictures inside Office files are cleaned too. Comments and tracked changes are document content and are left as they are, so remove them in the Office app first. A photo that relied on its orientation tag may show sideways in some apps.</p></details>
+            <details><summary>Does PermaDel show what changed after an update?</summary><p>Yes. When a new version arrives, the what's new dialog shows the changes in plain words, grouped into New, Improved and Fixed, with a link to the full notes. After PermaDel updates itself, the next time you open it, it shows what changed in the new version once. Opening PermaDel from the File Explorer menu never shows it.</p></details>
         </div>
     </section>
 </main>
