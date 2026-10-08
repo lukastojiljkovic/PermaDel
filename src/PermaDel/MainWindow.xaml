@@ -173,6 +173,7 @@
                         ItemContainerStyle="{StaticResource StretchListViewItemStyle}"
                         DoubleTapped="OnBrowserDoubleTapped"
                         KeyDown="OnBrowserKeyDown"
+                        ContextRequested="OnBrowserContextRequested"
                         SelectionChanged="OnBrowserSelectionChanged">
                         <ListView.ContextFlyout>
                             <MenuFlyout>
@@ -207,22 +208,32 @@
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Visibility="Collapsed" />
 
-                    <Grid Grid.Row="3">
+                    <Grid Grid.Row="3" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
                         <TextBlock x:Name="SelectionText" VerticalAlignment="Center" Style="{StaticResource SecondaryCaptionStyle}" />
-                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                            <Button x:Name="RemoveMetadataButton" IsEnabled="False" Click="OnRemoveMetadataClick">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon Glyph="&#xE75C;" FontSize="14" />
-                                    <TextBlock Text="Remove metadata" />
-                                </StackPanel>
-                            </Button>
-                            <Button x:Name="AddButton" IsEnabled="False" Click="OnAddClick">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon Glyph="&#xE710;" FontSize="14" />
-                                    <TextBlock Text="Add to shred list" />
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
+                        <Button x:Name="WipeButton" Grid.Column="1" VerticalAlignment="Center" Visibility="Collapsed" Click="OnWipeFreeSpaceClick">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE75C;" FontSize="14" />
+                                <TextBlock Text="Wipe free space" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RemoveMetadataButton" Grid.Column="2" VerticalAlignment="Center" IsEnabled="False" Click="OnRemoveMetadataClick">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8EC;" FontSize="14" />
+                                <TextBlock Text="Remove metadata" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="AddButton" Grid.Column="3" VerticalAlignment="Center" IsEnabled="False" Click="OnAddClick">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                <TextBlock Text="Add to shred list" />
+                            </StackPanel>
+                        </Button>
                     </Grid>
                 </Grid>
 
@@ -333,7 +344,7 @@
 
                         <StackPanel x:Name="ProgressPanel" Spacing="6" Visibility="Collapsed">
                             <Grid>
-                                <TextBlock Text="Shredding…" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBlock x:Name="ProgressTitle" Text="Shredding…" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                 <TextBlock x:Name="ProgressPercent" HorizontalAlignment="Right" />
                             </Grid>
                             <ProgressBar x:Name="ShredProgressBar" Maximum="1" />
