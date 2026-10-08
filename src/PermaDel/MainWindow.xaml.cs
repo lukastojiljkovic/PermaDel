@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
@@ -7,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using PermaDel.Core;
+using PermaDel.Core.Metadata;
 using PermaDel.Core.Updates;
 using PermaDel.Dialogs;
 using PermaDel.Models;
@@ -398,6 +400,105 @@ public sealed partial class MainWindow : Window
 
     #endregion
 
+    #region Metadata
+
+    private async void OnRemoveMetadataClick(object sender, RoutedEventArgs e)
+    {
+        var selected = BrowserList.SelectedItems.Cast<FileEntry>().Where(entry => !entry.IsContainer).ToList();
+        if (selected.Count == 0)
+            return;
+
+        List<MetadataFile> files;
+        try
+        {
+            files = await Task.Run(() => selected.Select(entry => new MetadataFile(entry, MetadataCleaner.Inspect(entry.FullPath))).ToList());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ShowStatus(InfoBarSeverity.Error, "Can't read the selected files", ex.Message);
+            return;
+        }
+
+        var mode = await MetadataPrompt.ShowAsync(Dialogs, files);
+        if (mode is null)
+            return;
+
+        MetadataRemovalResult result;
+        try
+        {
+            var paths = files.Select(file => file.Entry.FullPath).ToList();
+            result = await Task.Run(() => new MetadataRemover().Remove(paths, mode == MetadataRemovalMode.Replace));
+        }
+        catch (Exception ex)
+        {
+            ShowStatus(InfoBarSeverity.Error, "Metadata removal failed", ex.Message);
+            return;
+        }
+
+        ShowMetadataResult(result);
+        await RefreshAsync();
+    }
+
+    private void ShowMetadataResult(MetadataRemovalResult result)
+    {
+        var summary = $"Metadata removed from {Pluralize(result.FilesRemoved, "file")}.";
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 6, 0, 16) };
+        if (result.Copies.Count > 0)
+        {
+            var show = new Button { Content = "Show in File Explorer" };
+            show.Click += (_, _) => RevealInExplorer(result.Copies[0]);
+            actions.Children.Add(show);
+        }
+        if (!result.Succeeded)
+        {
+            var details = new Button { Content = "View details" };
+            details.Click += async (_, _) => await ShowMetadataFailuresAsync(result.Failures);
+            actions.Children.Add(details);
+        }
+
+        var content = actions.Children.Count > 0 ? actions : null;
+        if (result.Succeeded)
+            ShowStatus(InfoBarSeverity.Success, "Metadata removed", summary, content: content);
+        else
+            ShowStatus(InfoBarSeverity.Warning, "Some files were not cleaned", $"{summary} {Pluralize(result.Failures.Count, "file")} could not be cleaned.", content: content);
+    }
+
+    /// <summary>Lists what went wrong, one file per entry, the same way a failed shred does.</summary>
+    private async Task ShowMetadataFailuresAsync(IReadOnlyList<MetadataRemovalFailure> failures)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            RequestedTheme = Root.ActualTheme,
+            Style = (Style)Application.Current.Resources["DefaultContentDialogStyle"],
+            Title = "Files that could not be cleaned",
+            Content = new ListView
+            {
+                ItemsSource = failures,
+                ItemTemplate = (DataTemplate)Root.Resources["MetadataFailureTemplate"],
+                SelectionMode = ListViewSelectionMode.None,
+                MaxHeight = 400,
+            },
+            CloseButtonText = "Close",
+            DefaultButton = ContentDialogButton.Close,
+        };
+        await dialog.ShowAsync();
+    }
+
+    private static void RevealInExplorer(string path)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // Showing the file is a convenience; the copy is still on disk where the user asked for it.
+        }
+    }
+
+    #endregion
+
     #region Shredding
 
     private async void OnShredClick(object sender, RoutedEventArgs e) => await ShredAsync();
@@ -554,8 +655,12 @@ public sealed partial class MainWindow : Window
     private void UpdateCommands()
     {
         var selected = BrowserList.SelectedItems.Count;
+        var selectedFiles = BrowserList.SelectedItems.Cast<FileEntry>().Count(entry => !entry.IsContainer);
         SelectionText.Text = selected == 0 ? string.Empty : $"{Pluralize(selected, "item")} selected";
         AddButton.IsEnabled = selected > 0 && !IsBusy;
+        RemoveMetadataButton.IsEnabled = selectedFiles > 0 && !IsBusy;
+        BrowserAddMenuItem.IsEnabled = AddButton.IsEnabled;
+        BrowserMetadataMenuItem.IsEnabled = RemoveMetadataButton.IsEnabled;
 
         QueueSummary.Text = _queue.Count == 0 ? "Empty" : Pluralize(_queue.Count, "item");
         QueuePlaceholder.Visibility = _queue.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -563,13 +668,13 @@ public sealed partial class MainWindow : Window
         ShredButton.IsEnabled = _queue.Count > 0;
     }
 
-    private void ShowStatus(InfoBarSeverity severity, string title, string message, ButtonBase? action = null)
+    private void ShowStatus(InfoBarSeverity severity, string title, string message, ButtonBase? action = null, UIElement? content = null)
     {
         StatusBar.Severity = severity;
         StatusBar.Title = title;
         StatusBar.Message = message;
         StatusBar.ActionButton = action;
-        StatusBar.Content = null;
+        StatusBar.Content = content;
         StatusBar.IsOpen = true;
     }
 
