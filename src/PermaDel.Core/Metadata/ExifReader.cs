@@ -53,7 +53,7 @@ internal static class ExifReader
 
         // An EXIF block with nothing PermaDel can name, or one that cannot be read, is still worth removing.
         if (found.Count == before)
-            found.Add(MetadataCategory.OtherText);
+            found.Add(MetadataCategory.OtherDetails);
     }
 
     private static bool IsTiff(ReadOnlySpan<byte> tiff) =>
@@ -117,7 +117,7 @@ internal static class ExifReader
                 found.Add(MetadataCategory.Copyright);
                 break;
             case TagImageDescription:
-                found.Add(MetadataCategory.OtherText);
+                found.Add(MetadataCategory.OtherDetails);
                 break;
             case TagDateTime:
                 found.Add(MetadataCategory.DateTaken);

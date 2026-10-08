@@ -4,8 +4,9 @@ using System.Text;
 namespace PermaDel.Core.Metadata;
 
 /// <summary>
-/// Rewrites a WebP chunk by chunk. The EXIF and XMP chunks are dropped and the two matching hint bits in the
-/// feature chunk are cleared; the RIFF size is written again so it matches the shorter file.
+/// Rewrites a WebP chunk by chunk. Only the image, alpha, animation and colour profile chunks are kept: EXIF, XMP
+/// and anything else are dropped, the two metadata hint bits in the feature chunk are cleared, and the RIFF size
+/// is written again so it matches the shorter file.
 /// </summary>
 internal static class WebpMetadataCleaner
 {
@@ -76,16 +77,17 @@ internal static class WebpMetadataCleaner
                         CopyOrSkip(input, null, padded - (uint)data.Length, buffer);
                     }
                     break;
-                case "XMP ":
-                    found?.Add(MetadataCategory.OtherText);
-                    CopyOrSkip(input, null, padded, buffer);
-                    break;
                 case "VP8X":
                     WriteFeatureChunk(input, chunk, size, output);
                     break;
-                default:
+                case "VP8 " or "VP8L" or "ALPH" or "ANIM" or "ANMF" or "ICCP":
                     output?.Write(chunk);
                     CopyOrSkip(input, output, padded, buffer);
+                    break;
+                default:
+                    // XMP, or a chunk WebP does not define, which readers skip anyway.
+                    found?.Add(MetadataCategory.OtherDetails);
+                    CopyOrSkip(input, null, padded, buffer);
                     break;
             }
         }

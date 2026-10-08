@@ -16,7 +16,7 @@ public sealed class MetadataCleanerTests
 
         ExifReader.Read(tiff, found);
 
-        Assert.Equal([MetadataCategory.OtherText], found.ToList());
+        Assert.Equal([MetadataCategory.OtherDetails], found.ToList());
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class MetadataCleanerTests
                 MetadataCategory.AuthorAndComments,
                 MetadataCategory.Copyright,
                 MetadataCategory.Thumbnail,
-                MetadataCategory.OtherText,
+                MetadataCategory.OtherDetails,
             ],
             inspection.Categories);
     }
@@ -90,6 +90,40 @@ public sealed class MetadataCleanerTests
         var (original, _) = MetadataFixtures.Jpeg(orientation);
 
         Assert.Equal(expected, Inspect(original, "photo.jpg").MayShowSideways);
+    }
+
+    [Theory]
+    [InlineData(0xE0, "JFXX\0", MetadataCategory.Thumbnail)]
+    [InlineData(0xE0, "AVI1", MetadataCategory.OtherDetails)]
+    [InlineData(0xE2, "MPF\0", MetadataCategory.OtherDetails)]
+    [InlineData(0xE3, "Meta", MetadataCategory.OtherDetails)]
+    [InlineData(0xEF, "private", MetadataCategory.OtherDetails)]
+    public void Jpeg_DropsAndReportsEveryOtherApplicationSegment(int marker, string payload, MetadataCategory expected)
+    {
+        var original = MetadataFixtures.JpegWith([MetadataFixtures.Segment(marker, Encoding.ASCII.GetBytes(payload))]);
+
+        Assert.Equal([expected], Inspect(original, "photo.jpg").Categories);
+        Assert.Equal(MetadataFixtures.CleanJpeg(), Clean(original, "photo.jpg"));
+    }
+
+    [Fact]
+    public void Jpeg_KeepsTheJfifHeaderButNotItsPreview()
+    {
+        var withPreview = MetadataFixtures.Segment(0xE0, [.. "JFIF\0"u8, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0xAA, 0xBB, 0xCC]);
+        var withoutPreview = MetadataFixtures.Segment(0xE0, [.. "JFIF\0"u8, 1, 1, 0, 0, 1, 0, 1, 0, 0]);
+        var original = MetadataFixtures.JpegWith([withPreview]);
+
+        Assert.Equal([MetadataCategory.Thumbnail], Inspect(original, "photo.jpg").Categories);
+        Assert.Equal(MetadataFixtures.JpegWith([withoutPreview]), Clean(original, "photo.jpg"));
+    }
+
+    [Fact]
+    public void Jpeg_DropsAndReportsWhatFollowsTheEndMarker()
+    {
+        var original = MetadataFixtures.JpegWith([], trailer: [.. "ftypmp42"u8]);
+
+        Assert.Equal([MetadataCategory.OtherDetails], Inspect(original, "photo.jpg").Categories);
+        Assert.Equal(MetadataFixtures.CleanJpeg(), Clean(original, "photo.jpg"));
     }
 
     [Fact]
@@ -117,7 +151,7 @@ public sealed class MetadataCleanerTests
                 MetadataCategory.AuthorAndComments,
                 MetadataCategory.Copyright,
                 MetadataCategory.Thumbnail,
-                MetadataCategory.OtherText,
+                MetadataCategory.OtherDetails,
             ],
             inspection.Categories);
     }
@@ -128,6 +162,18 @@ public sealed class MetadataCleanerTests
         var (original, _) = MetadataFixtures.Png();
 
         Assert.Throws<InvalidDataException>(() => Clean(original[..^6], "image.png"));
+    }
+
+    [Fact]
+    public void Png_KeepsTheImageChunksAndDropsEveryOtherAncillaryOne()
+    {
+        var physical = MetadataFixtures.Chunk("pHYs", [0, 0, 0x0B, 0x13, 0, 0, 0x0B, 0x13, 1]);
+        var transparency = MetadataFixtures.Chunk("tRNS", [0, 0]);
+        var original = MetadataFixtures.PngWith(
+            physical, MetadataFixtures.Chunk("caBX", [.. "jumb"u8]), transparency, MetadataFixtures.Chunk("mkBF", [1, 2]));
+
+        Assert.Equal([MetadataCategory.OtherDetails], Inspect(original, "image.png").Categories);
+        Assert.Equal(MetadataFixtures.PngWith(physical, transparency), Clean(original, "image.png"));
     }
 
     [Fact]
@@ -159,7 +205,7 @@ public sealed class MetadataCleanerTests
                 MetadataCategory.AuthorAndComments,
                 MetadataCategory.Copyright,
                 MetadataCategory.Thumbnail,
-                MetadataCategory.OtherText,
+                MetadataCategory.OtherDetails,
             ],
             inspection.Categories);
     }
@@ -170,6 +216,16 @@ public sealed class MetadataCleanerTests
         var (_, clean) = MetadataFixtures.Webp();
 
         Assert.False(Inspect(clean, "image.webp").HasMetadata);
+    }
+
+    [Fact]
+    public void Webp_KeepsTheColourProfileAndDropsChunksWebPDoesNotDefine()
+    {
+        var profile = MetadataFixtures.WebpChunk("ICCP", [1, 2, 3]);
+        var original = MetadataFixtures.WebpWith(0x20, profile, MetadataFixtures.WebpChunk("C2PA", [1, 2, 3, 4]));
+
+        Assert.Equal([MetadataCategory.OtherDetails], Inspect(original, "image.webp").Categories);
+        Assert.Equal(MetadataFixtures.WebpWith(0x20, profile), Clean(original, "image.webp"));
     }
 
     [Fact]
@@ -233,6 +289,30 @@ public sealed class MetadataCleanerTests
 
         Assert.Equal(MetadataFormat.OfficeOpenXml, inspection.Format);
         Assert.False(inspection.HasMetadata);
+    }
+
+    [Fact]
+    public void Docx_CleansThePhotosInside()
+    {
+        var (photo, cleanedPhoto) = MetadataFixtures.Jpeg(orientation: 6);
+        var original = MetadataFixtures.Docx(withMetadata: false, picture: photo);
+
+        var inspection = Inspect(original, "report.docx");
+        var cleaned = Clean(original, "report.docx");
+
+        Assert.Equal(Inspect(photo, "photo.jpg").Categories, inspection.Categories);
+        Assert.True(inspection.MayShowSideways);
+        Assert.Equal(cleanedPhoto, MetadataFixtures.ReadPart(cleaned, MetadataFixtures.PicturePart));
+    }
+
+    [Fact]
+    public void Docx_CopiesPicturesItCannotCleanAsTheyAre()
+    {
+        var drawing = "not a photo"u8.ToArray();
+
+        var cleaned = Clean(MetadataFixtures.Docx(withMetadata: true, picture: drawing), "report.docx");
+
+        Assert.Equal(drawing, MetadataFixtures.ReadPart(cleaned, MetadataFixtures.PicturePart));
     }
 
     [Fact]

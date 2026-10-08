@@ -11,8 +11,8 @@ public enum MetadataFormat
 }
 
 /// <summary>
-/// A kind of metadata found in a file. Images use the first eight and Office files the last five; the
-/// dialog turns each one into the words it shows.
+/// A kind of metadata found in a file. Images use the first eight and Office files the last five, plus the
+/// first eight for the pictures inside them. The dialog turns each one into the words it shows.
 /// </summary>
 public enum MetadataCategory
 {
@@ -23,7 +23,7 @@ public enum MetadataCategory
     AuthorAndComments,
     Copyright,
     Thumbnail,
-    OtherText,
+    OtherDetails,
     Author,
     LastSavedBy,
     Company,

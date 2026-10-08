@@ -39,7 +39,7 @@ public static class MetadataCleaner
                 return new MetadataInspection(MetadataFormat.WebP, found.ToList(), found.NeedsRotation);
             case MetadataFormat.OfficeOpenXml:
                 return OoxmlMetadataCleaner.Inspect(input, found)
-                    ? new MetadataInspection(MetadataFormat.OfficeOpenXml, found.ToList(), MayShowSideways: false)
+                    ? new MetadataInspection(MetadataFormat.OfficeOpenXml, found.ToList(), found.NeedsRotation)
                     : MetadataInspection.Unsupported;
             default:
                 return MetadataInspection.Unsupported;

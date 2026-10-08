@@ -3,9 +3,9 @@ using System.Buffers.Binary;
 namespace PermaDel.Core.Metadata;
 
 /// <summary>
-/// Walks a JPEG marker by marker. EXIF and XMP (APP1), IPTC and Photoshop (APP13) and comments are dropped,
-/// together with APP2 to APP15 segments that are not the ICC profile or the Adobe colour marker. Every other
-/// byte, including the entropy-coded image data, is copied exactly as it was.
+/// Walks a JPEG marker by marker. Of the application segments and comments only the JFIF header (without its
+/// preview image), the ICC profile and the Adobe colour marker are kept, and nothing after the end marker is
+/// copied. Every other byte, including the entropy-coded image data, is copied exactly as it was.
 /// </summary>
 internal static class JpegMetadataCleaner
 {
@@ -17,8 +17,12 @@ internal static class JpegMetadataCleaner
     private const int MarkerApp2 = 0xE2;
     private const int MarkerApp13 = 0xED;
     private const int MarkerApp14 = 0xEE;
+    private const int MarkerApp15 = 0xEF;
     private const int MarkerCom = 0xFE;
+    private const int JfifLength = 14;
 
+    private static readonly byte[] JfifHeader = "JFIF\0"u8.ToArray();
+    private static readonly byte[] JfxxHeader = "JFXX\0"u8.ToArray();
     private static readonly byte[] ExifHeader = "Exif\0\0"u8.ToArray();
     private static readonly byte[] IccHeader = "ICC_PROFILE\0"u8.ToArray();
     private static readonly byte[] PhotoshopHeader = "Photoshop 3.0\0"u8.ToArray();
@@ -65,9 +69,7 @@ internal static class JpegMetadataCleaner
             if (marker == MarkerSos)
             {
                 hasImageData = true;
-                var payload = ReadSegment(reader);
-                Collect(found, marker, payload);
-                WriteSegment(output, marker, payload);
+                WriteSegment(output, marker, ReadSegment(reader));
                 if (CopyEntropyCodedData(reader, output))
                     break;
                 continue;
@@ -80,13 +82,18 @@ internal static class JpegMetadataCleaner
             }
 
             var segment = ReadSegment(reader);
-            Collect(found, marker, segment);
-            if (KeepSegment(marker, segment))
-                WriteSegment(output, marker, segment);
+            var kept = Kept(marker, segment);
+            if (kept != segment)
+                Collect(found, marker, segment);
+            if (kept is not null)
+                WriteSegment(output, marker, kept);
         }
 
         if (!hasImageData)
             throw new InvalidDataException("The JPEG has no image data.");
+        // Phones append motion clips and extra pictures after the end marker; none of it is copied.
+        if (found is not null && reader.Read() >= 0)
+            found.Add(MetadataCategory.OtherDetails);
     }
 
     /// <summary>Reads the next marker, skipping fill bytes and stray stuffed bytes.</summary>
@@ -175,18 +182,33 @@ internal static class JpegMetadataCleaner
         output.WriteByte((byte)marker);
     }
 
-    /// <summary>Only the JFIF header, the ICC profile and the Adobe colour marker survive here.</summary>
-    private static bool KeepSegment(int marker, byte[] payload) => marker switch
+    /// <summary>
+    /// The payload a segment is written with, or null when it is dropped. A trimmed payload is a new array, so the
+    /// caller can tell it apart from a segment that was kept whole.
+    /// </summary>
+    private static byte[]? Kept(int marker, byte[] payload) => marker switch
     {
-        MarkerApp0 => true,
-        MarkerApp1 => false,
-        MarkerApp2 => StartsWith(payload, IccHeader),
-        MarkerApp14 => StartsWith(payload, AdobeHeader),
-        MarkerCom => false,
-        >= 0xE3 and <= 0xEF => false,
-        _ => true,
+        MarkerApp0 => IsJfif(payload) ? WithoutThumbnail(payload) : null,
+        MarkerApp2 => StartsWith(payload, IccHeader) ? payload : null,
+        MarkerApp14 => StartsWith(payload, AdobeHeader) ? payload : null,
+        MarkerCom or (>= MarkerApp1 and <= MarkerApp15) => null,
+        _ => payload,
     };
 
+    private static bool IsJfif(byte[] payload) => payload.Length >= JfifLength && StartsWith(payload, JfifHeader);
+
+    /// <summary>The JFIF header without the small uncompressed preview it may carry after its first fourteen bytes.</summary>
+    private static byte[] WithoutThumbnail(byte[] payload)
+    {
+        if (payload.Length == JfifLength && payload[12] == 0 && payload[13] == 0)
+            return payload;
+
+        var header = payload[..JfifLength];
+        header[12] = header[13] = 0;
+        return header;
+    }
+
+    /// <summary>Names what a dropped or trimmed segment held.</summary>
     private static void Collect(FoundMetadata? found, int marker, byte[] payload)
     {
         if (found is null)
@@ -194,17 +216,19 @@ internal static class JpegMetadataCleaner
 
         switch (marker)
         {
-            case MarkerCom:
-                found.Add(MetadataCategory.OtherText);
+            case MarkerApp0:
+                found.Add(StartsWith(payload, JfifHeader) || StartsWith(payload, JfxxHeader)
+                    ? MetadataCategory.Thumbnail
+                    : MetadataCategory.OtherDetails);
                 break;
-            case MarkerApp1:
-                if (StartsWith(payload, ExifHeader))
-                    ExifReader.Read(payload.AsSpan(ExifHeader.Length), found);
-                else
-                    found.Add(MetadataCategory.OtherText);
+            case MarkerApp1 when StartsWith(payload, ExifHeader):
+                ExifReader.Read(payload.AsSpan(ExifHeader.Length), found);
                 break;
             case MarkerApp13:
                 ReadIptc(payload, found);
+                break;
+            default:
+                found.Add(MetadataCategory.OtherDetails);
                 break;
         }
     }
@@ -240,7 +264,7 @@ internal static class JpegMetadataCleaner
         }
 
         if (found.Count == before)
-            found.Add(MetadataCategory.OtherText);
+            found.Add(MetadataCategory.OtherDetails);
     }
 
     private static void ReadIptcDatasets(ReadOnlySpan<byte> data, FoundMetadata found)
@@ -265,7 +289,7 @@ internal static class JpegMetadataCleaner
                     80 or 85 or 110 => MetadataCategory.AuthorAndComments,
                     90 or 92 or 95 or 101 => MetadataCategory.Location,
                     116 => MetadataCategory.Copyright,
-                    _ => MetadataCategory.OtherText,
+                    _ => MetadataCategory.OtherDetails,
                 };
                 found.Add(category);
             }

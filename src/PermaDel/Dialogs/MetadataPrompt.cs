@@ -24,7 +24,7 @@ internal static class MetadataPrompt
         var choices = new StackPanel { Spacing = 4 };
         choices.Children.Add(copyOption);
         choices.Children.Add(replaceOption);
-        choices.Children.Add(Hint("The originals are overwritten. Use the shred list if they must not be recoverable."));
+        choices.Children.Add(Hint("The old versions stay in the drive's free space until Windows reuses it. Wipe the drive's free space afterwards if they must not be recoverable."));
 
         var content = new StackPanel { Spacing = 16 };
         content.Children.Add(new ScrollViewer
@@ -43,7 +43,7 @@ internal static class MetadataPrompt
                 IsOpen = true,
                 IsClosable = false,
                 Severity = InfoBarSeverity.Informational,
-                Message = "The photo may show sideways in some apps if it relied on its orientation tag.",
+                Message = "Photos may show sideways in some apps if they relied on their orientation tag.",
             });
         }
         content.Children.Add(choices);
@@ -108,13 +108,13 @@ internal static class MetadataPrompt
         MetadataCategory.AuthorAndComments => "Author and comments",
         MetadataCategory.Copyright => "Copyright",
         MetadataCategory.Thumbnail => "Thumbnail",
-        MetadataCategory.OtherText => "Other text",
+        MetadataCategory.OtherDetails => "Other details",
         MetadataCategory.Author => "Author",
         MetadataCategory.LastSavedBy => "Last saved by",
         MetadataCategory.Company => "Company",
         MetadataCategory.Manager => "Manager",
         MetadataCategory.CustomProperties => "Custom properties",
-        _ => "Other text",
+        _ => "Other details",
     };
 
     private static TextBlock Hint(string text)

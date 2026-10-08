@@ -11,6 +11,8 @@ internal static class MetadataFixtures
 {
     public const string DocumentPart = "word/document.xml";
 
+    public const string PicturePart = "word/media/image1.jpeg";
+
     /// <summary>A JPEG with APP0, EXIF (GPS, orientation and a thumbnail), XMP, IPTC, a comment, ICC, an unknown APP5, Adobe, image data and EOI.</summary>
     public static (byte[] Original, byte[] Cleaned) Jpeg(ushort orientation = 1)
     {
@@ -39,39 +41,47 @@ internal static class MetadataFixtures
     /// <summary>A JPEG with no metadata at all: APP0, ICC, Adobe, image data and EOI.</summary>
     public static byte[] CleanJpeg() => Jpeg().Cleaned;
 
+    /// <summary>The clean JPEG with <paramref name="segments"/> right after SOI and <paramref name="trailer"/> after EOI.</summary>
+    public static byte[] JpegWith(byte[][] segments, byte[]? trailer = null)
+    {
+        var clean = CleanJpeg();
+        return Join([clean[..2], .. segments, clean[2..], trailer ?? []]);
+    }
+
     /// <summary>A PNG with IHDR, text, EXIF and time chunks, image data and IEND.</summary>
     public static (byte[] Original, byte[] Cleaned) Png()
     {
-        var header = Chunk("IHDR", [0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]);
         var text = Chunk("tEXt", [.. "Author\0"u8, .. "Jane"u8]);
         var compressedText = Chunk("zTXt", [.. "Copyright\0"u8, 0, .. new byte[] { 0x78, 0x9C }]);
         var internationalText = Chunk("iTXt", [.. "Comment\0"u8, 0, 0, 0, 0, .. "hi"u8]);
         var exif = Chunk("eXIf", Tiff(orientation: 1));
         var time = Chunk("tIME", [0x07, 0xE8, 1, 2, 3, 4, 5]);
-        var image = Chunk("IDAT", [1, 2, 3, 4, 5]);
-        var end = Chunk("IEND", []);
 
-        var signature = PngSignature();
-        return (
-            Join(signature, header, text, compressedText, internationalText, exif, time, image, end),
-            Join(signature, header, image, end));
+        return (PngWith(text, compressedText, internationalText, exif, time), PngWith());
     }
+
+    /// <summary>A one-pixel PNG with <paramref name="chunks"/> between its header and its image data.</summary>
+    public static byte[] PngWith(params byte[][] chunks) =>
+        Join([PngSignature(), Chunk("IHDR", [0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]), .. chunks, Chunk("IDAT", [1, 2, 3, 4, 5]), Chunk("IEND", [])]);
 
     /// <summary>A WebP with a feature chunk, EXIF, XMP and image data.</summary>
     public static (byte[] Original, byte[] Cleaned) Webp()
     {
-        var feature = WebpChunk("VP8X", [0x1C, 0, 0, 0, 0x17, 0, 0, 0x0D, 0, 0]);
         var exif = WebpChunk("EXIF", Tiff(orientation: 1));
         var xmp = WebpChunk("XMP ", [.. "<x:xmpmeta/>"u8]);
-        var image = WebpChunk("VP8 ", [1, 2, 3, 4, 5]);
 
-        return (
-            Riff(Join(feature, exif, xmp, image)),
-            Riff(Join(WebpChunk("VP8X", [0x10, 0, 0, 0, 0x17, 0, 0, 0x0D, 0, 0]), image)));
+        return (WebpWith(0x1C, exif, xmp), WebpWith(0x10));
     }
 
-    /// <summary>An Office Open XML package with core, extended, custom and document parts, or without the personal ones.</summary>
-    public static byte[] Docx(bool withMetadata)
+    /// <summary>A WebP whose feature chunk carries <paramref name="flags"/>, then <paramref name="chunks"/> and the image data.</summary>
+    public static byte[] WebpWith(byte flags, params byte[][] chunks) =>
+        Riff(Join([WebpChunk("VP8X", [flags, 0, 0, 0, 0x17, 0, 0, 0x0D, 0, 0]), .. chunks, WebpChunk("VP8 ", [1, 2, 3, 4, 5])]));
+
+    /// <summary>
+    /// An Office Open XML package with core, extended, custom and document parts, or without the personal ones,
+    /// and <paramref name="picture"/> at <see cref="PicturePart"/> when one is given.
+    /// </summary>
+    public static byte[] Docx(bool withMetadata, byte[]? picture = null)
     {
         using var package = new MemoryStream();
         using (var archive = new ZipArchive(package, ZipArchiveMode.Create, leaveOpen: true))
@@ -83,6 +93,8 @@ internal static class MetadataFixtures
             Add(archive, "docProps/app.xml", App(withMetadata));
             if (withMetadata)
                 Add(archive, "docProps/custom.xml", Custom());
+            if (picture is not null)
+                Add(archive, PicturePart, picture);
         }
         return package.ToArray();
     }
@@ -135,14 +147,14 @@ internal static class MetadataFixtures
     private static byte[] PngSignature() => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     /// <summary>A JPEG marker segment: the marker, its length and the payload.</summary>
-    private static byte[] Segment(int marker, byte[] payload)
+    public static byte[] Segment(int marker, byte[] payload)
     {
         var length = payload.Length + 2;
         return [0xFF, (byte)marker, (byte)(length >> 8), (byte)length, .. payload];
     }
 
     /// <summary>A PNG chunk with its data and a CRC over the type and the data.</summary>
-    private static byte[] Chunk(string type, byte[] data)
+    public static byte[] Chunk(string type, byte[] data)
     {
         var typeBytes = Encoding.ASCII.GetBytes(type);
         var crc = Crc32([.. typeBytes, .. data]);
@@ -154,7 +166,7 @@ internal static class MetadataFixtures
     }
 
     /// <summary>A WebP chunk: the four characters, the size, the data and a pad byte when the size is odd.</summary>
-    private static byte[] WebpChunk(string type, byte[] data)
+    public static byte[] WebpChunk(string type, byte[] data)
     {
         var padded = data.Length % 2 == 0 ? data : [.. data, 0];
         return [.. Encoding.ASCII.GetBytes(type), (byte)data.Length, (byte)(data.Length >> 8), (byte)(data.Length >> 16), (byte)(data.Length >> 24), .. padded];
@@ -185,11 +197,13 @@ internal static class MetadataFixtures
 
     private static byte[] Join(params byte[][] parts) => [.. parts.SelectMany(part => part)];
 
-    private static void Add(ZipArchive archive, string name, string content)
+    private static void Add(ZipArchive archive, string name, string content) => Add(archive, name, Encoding.UTF8.GetBytes(content));
+
+    private static void Add(ZipArchive archive, string name, byte[] content)
     {
         var entry = archive.CreateEntry(name);
         using var stream = entry.Open();
-        stream.Write(Encoding.UTF8.GetBytes(content));
+        stream.Write(content);
     }
 
     private static string ContentTypes(bool withMetadata)

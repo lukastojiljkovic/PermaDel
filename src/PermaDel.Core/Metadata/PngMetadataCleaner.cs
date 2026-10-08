@@ -4,14 +4,22 @@ using System.Text;
 namespace PermaDel.Core.Metadata;
 
 /// <summary>
-/// Rewrites a PNG chunk by chunk. Text, time and EXIF chunks are dropped; every other chunk is copied whole,
-/// together with its CRC, so nothing about the image itself changes.
+/// Rewrites a PNG chunk by chunk. Critical chunks and the ancillary chunks that change how the image looks or
+/// moves are copied whole, together with their CRC, so nothing about the image itself changes. Every other chunk,
+/// such as text, time, EXIF or an app's private data, is dropped.
 /// </summary>
 internal static class PngMetadataCleaner
 {
     private const int InspectLimit = 1024 * 1024;
     private const int BufferSize = 64 * 1024;
     private const string EndChunk = "IEND";
+
+    /// <summary>The ancillary chunks PNG and APNG define for colour, transparency, scale and animation.</summary>
+    private static readonly HashSet<string> ImageChunks =
+    [
+        "tRNS", "cHRM", "gAMA", "iCCP", "sBIT", "sRGB", "cICP", "mDCV", "cLLI",
+        "bKGD", "hIST", "pHYs", "sPLT", "oFFs", "pCAL", "sCAL", "sTER", "acTL", "fcTL", "fdAT",
+    ];
 
     /// <summary>The eight bytes every PNG file starts with.</summary>
     internal static ReadOnlySpan<byte> Signature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
@@ -70,7 +78,8 @@ internal static class PngMetadataCleaner
             throw new InvalidDataException("The PNG has data after its end chunk.");
     }
 
-    private static bool IsDropped(string type) => type is "tEXt" or "zTXt" or "iTXt" or "eXIf" or "tIME";
+    /// <summary>A lower-case first letter marks an ancillary chunk; critical ones are needed to decode the image.</summary>
+    private static bool IsDropped(string type) => char.IsAsciiLetterLower(type[0]) && !ImageChunks.Contains(type);
 
     private static void InspectChunk(string type, byte[] data, FoundMetadata found)
     {
@@ -89,8 +98,11 @@ internal static class PngMetadataCleaner
                     "copyright" => MetadataCategory.Copyright,
                     "software" => MetadataCategory.EditingSoftware,
                     "creation time" => MetadataCategory.DateTaken,
-                    _ => MetadataCategory.OtherText,
+                    _ => MetadataCategory.OtherDetails,
                 });
+                break;
+            default:
+                found.Add(MetadataCategory.OtherDetails);
                 break;
         }
     }

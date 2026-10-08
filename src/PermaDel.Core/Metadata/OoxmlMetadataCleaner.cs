@@ -6,7 +6,8 @@ namespace PermaDel.Core.Metadata;
 
 /// <summary>
 /// Rewrites an Office Open XML package: the author names in <c>docProps/core.xml</c> and the company, manager
-/// and custom properties are emptied or dropped. Document parts are copied exactly as they were.
+/// and custom properties are emptied or dropped, and the JPEG, PNG and WebP pictures in it are cleaned like
+/// files of their own. Document parts are copied exactly as they were.
 /// </summary>
 /// <remarks>
 /// The .NET zip API cannot copy an entry's compressed bytes, so every kept entry is written again with the same
@@ -56,6 +57,8 @@ internal static class OoxmlMetadataCleaner
 
             if (FindEntry(archive, CustomPart) is not null)
                 found.Add(MetadataCategory.CustomProperties);
+            foreach (var entry in archive.Entries.Where(entry => IsPicture(entry.FullName)))
+                InspectPicture(entry, found);
             return true;
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or XmlException)
@@ -84,7 +87,10 @@ internal static class OoxmlMetadataCleaner
             created.ExternalAttributes = entry.ExternalAttributes;
             using var sourceStream = entry.Open();
             using var targetStream = created.Open();
-            CopyOrEdit(entry.FullName, dropCustomPart, sourceStream, targetStream);
+            if (IsPicture(entry.FullName))
+                CleanPicture(sourceStream, targetStream);
+            else
+                CopyOrEdit(entry.FullName, dropCustomPart, sourceStream, targetStream);
         }
     }
 
@@ -104,6 +110,33 @@ internal static class OoxmlMetadataCleaner
         {
             return false;
         }
+    }
+
+    /// <summary>A picture pasted into a document keeps its own metadata, such as where a photo was taken.</summary>
+    private static void InspectPicture(ZipArchiveEntry entry, FoundMetadata found)
+    {
+        using var picture = new MemoryStream();
+        using (var stream = entry.Open())
+            stream.CopyTo(picture);
+
+        var inspection = MetadataCleaner.Inspect(picture, fileName: null);
+        foreach (var category in inspection.Categories)
+            found.Add(category);
+        if (inspection.MayShowSideways)
+            found.NeedsRotation = true;
+    }
+
+    /// <summary>Cleans a JPEG, PNG or WebP picture; any other kind of picture is copied as it was.</summary>
+    private static void CleanPicture(Stream input, Stream output)
+    {
+        using var picture = new MemoryStream();
+        input.CopyTo(picture);
+        var format = MetadataCleaner.Detect(picture, fileName: null);
+        picture.Position = 0;
+        if (format == MetadataFormat.Unsupported)
+            picture.CopyTo(output);
+        else
+            MetadataCleaner.Clean(picture, output, format);
     }
 
     private static void CopyOrEdit(string name, bool dropCustomPart, Stream input, Stream output)
@@ -215,6 +248,9 @@ internal static class OoxmlMetadataCleaner
     private static bool IsCustomProperties(string? contentType) => contentType == CustomPropertiesContentType;
 
     private static bool IsCustomPartName(string? partName) => partName is not null && IsPart(partName, CustomPart);
+
+    /// <summary>Word, Excel and PowerPoint keep pictures in a <c>media</c> folder: <c>word/media/image1.jpeg</c>.</summary>
+    private static bool IsPicture(string name) => name.Replace('\\', '/').Contains("/media/", StringComparison.OrdinalIgnoreCase);
 
     private static ZipArchiveEntry? FindEntry(ZipArchive archive, string name) =>
         archive.Entries.FirstOrDefault(entry => IsPart(entry.FullName, name));
