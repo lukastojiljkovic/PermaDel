@@ -77,6 +77,8 @@ build.ps1                    Test, publish and package pipeline
 
 - Keep a pull request to one change, and describe what it changes and how you tested it.
 - The format check, the tests and the build must pass. CI runs them on every pull request.
-- Add a line to the *Unreleased* section of [CHANGELOG.md](CHANGELOG.md) for anything users notice.
+- Add a line to the *Unreleased* section of [CHANGELOG.md](CHANGELOG.md) for anything users notice. PermaDel shows
+  these lines in its update dialogs, so write each one as the user would describe the change, not as the code does:
+  "Uninstalling PermaDel also removes updates it downloaded but never installed", not the folder path.
 
 By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE).

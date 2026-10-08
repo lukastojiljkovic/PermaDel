@@ -65,7 +65,7 @@
                     IsClosable="True"
                     CloseButtonClick="OnUpdateBarClosed">
                     <InfoBar.Content>
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,16">
                             <Button x:Name="UpdateNotesButton" Content="What's new" Click="OnUpdateNotesClick" />
                             <Button x:Name="UpdateInstallButton" Content="Update" Style="{StaticResource AccentButtonStyle}" Click="OnUpdateInstallClick" />
                         </StackPanel>
