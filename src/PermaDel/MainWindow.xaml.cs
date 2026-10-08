@@ -68,6 +68,8 @@ public sealed partial class MainWindow : Window
         {
             // The check runs in the background; the window is never delayed.
             _ = Updates.CheckOnStartupAsync();
+            // A crash or a killed process can leave a wipe folder behind; clear those without saying anything.
+            _ = Task.Run(RemoveWipeLeftovers);
             try
             {
                 var showedUpdatedNotes = await ShowUpdatedNotesAsync();
@@ -407,7 +409,7 @@ public sealed partial class MainWindow : Window
         var passes = double.IsNaN(PassesBox.Value) ? AppSettings.DefaultPasses : (int)Math.Clamp(PassesBox.Value, Shredder.MinPasses, Shredder.MaxPasses);
         if (AppSettings.ConfirmBeforeShredding && !await ConfirmShredAsync(passes))
             return;
-        if (AppSettings.RequireVerification && !await VerifyUserAsync())
+        if (AppSettings.RequireVerification && !await VerifyUserAsync($"Verify it's you to permanently shred {Pluralize(_queue.Count, "item")}.", "Nothing was shredded"))
             return;
 
         using var cancellation = new CancellationTokenSource();
@@ -453,15 +455,15 @@ public sealed partial class MainWindow : Window
         return await confirmation.ShowAsync() == ContentDialogResult.Primary;
     }
 
-    /// <summary>Asks Windows to confirm the signed-in user, so nobody else at an unlocked PC can shred data with PermaDel.</summary>
-    private async Task<bool> VerifyUserAsync()
+    /// <summary>Asks Windows to confirm the signed-in user, so nobody else at an unlocked PC can destroy data with PermaDel.</summary>
+    private async Task<bool> VerifyUserAsync(string message, string nothingHappened)
     {
         try
         {
-            if (await AccountVerification.VerifyAsync(WindowHandle, $"Verify it's you to permanently shred {Pluralize(_queue.Count, "item")}."))
+            if (await AccountVerification.VerifyAsync(WindowHandle, message))
                 return true;
 
-            ShowStatus(InfoBarSeverity.Informational, "Nothing was shredded", "Your identity wasn't verified.");
+            ShowStatus(InfoBarSeverity.Informational, nothingHappened, "Your identity wasn't verified.");
         }
         catch (COMException ex)
         {
@@ -529,12 +531,126 @@ public sealed partial class MainWindow : Window
             return;
 
         args.Cancel = true;
-        ShowStatus(InfoBarSeverity.Warning, "Shredding in progress", "Cancel the operation before closing PermaDel.");
+        ShowStatus(InfoBarSeverity.Warning, $"{ProgressTitle.Text.TrimEnd('…')} in progress", "Cancel the operation before closing PermaDel.");
     }
 
     #endregion
 
-    private void SetBusy(CancellationTokenSource? cancellation)
+    #region Free-space wipe
+
+    /// <summary>What PermaDel knows about a drive, or null when the entry isn't a drive or can't be read.</summary>
+    private static WipeDriveInfo? WipeInfo(FileEntry entry) =>
+        entry.Kind == EntryKind.Drive ? FreeSpaceWiper.Describe(entry.FullPath) : null;
+
+    /// <summary>Clears wipe folders a crash or a killed process left behind, without saying anything about it.</summary>
+    private static void RemoveWipeLeftovers()
+    {
+        try
+        {
+            foreach (var drive in DriveInfo.GetDrives().Where(drive => drive.DriveType is DriveType.Fixed or DriveType.Removable && drive.IsReady))
+                FreeSpaceWiper.RemoveLeftovers(drive.RootDirectory.FullName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private void OnWipeFreeSpaceClick(object sender, RoutedEventArgs e)
+    {
+        if (BrowserList.SelectedItems is [FileEntry entry])
+            _ = WipeFreeSpaceAsync(entry);
+    }
+
+    /// <summary>The context menu a drive gets in "This PC": one item that wipes its free space.</summary>
+    private void OnBrowserContextRequested(UIElement sender, ContextRequestedEventArgs args)
+    {
+        var element = args.OriginalSource as FrameworkElement;
+        if (IsBusy || element?.DataContext is not FileEntry entry || WipeInfo(entry)?.CanWipe != true)
+            return;
+
+        var wipe = new MenuFlyoutItem { Text = "Wipe free space…", Icon = new FontIcon { Glyph = "\uE75C" } };
+        wipe.Click += async (_, _) => await WipeFreeSpaceAsync(entry);
+        var flyout = new MenuFlyout();
+        flyout.Items.Add(wipe);
+        var options = new FlyoutShowOptions();
+        if (args.TryGetPosition(element, out var position))
+            options.Position = position;
+        flyout.ShowAt(element, options);
+        args.Handled = true;
+    }
+
+    private async Task WipeFreeSpaceAsync(FileEntry entry)
+    {
+        if (IsBusy || WipeInfo(entry) is not { CanWipe: true } info)
+            return;
+
+        if (await WipePrompt.ShowAsync(Dialogs, entry, info, IsWindowsDrive(entry)) is not { } options)
+            return;
+        if (AppSettings.RequireVerification && !await VerifyUserAsync($"Verify it's you to wipe the free space on {entry.Name}.", "Nothing was wiped"))
+            return;
+
+        using var cancellation = new CancellationTokenSource();
+        var progress = new Progress<WipeProgress>(ReportWipeProgress);
+        SetBusy(cancellation, "Wiping free space…");
+
+        try
+        {
+            var result = await Task.Run(() => new FreeSpaceWiper().Wipe(entry.FullPath, options.CleanFileTable, progress, cancellation.Token));
+            ShowWipeResult(entry, result);
+        }
+        catch (OperationCanceledException)
+        {
+            ShowStatus(InfoBarSeverity.Warning, "Wipe cancelled", "The wipe was cancelled. The wipe files were removed.");
+        }
+        catch (Exception ex)
+        {
+            ShowStatus(InfoBarSeverity.Error, "Wipe failed", $"{ex.Message} The wipe files were removed.");
+        }
+        finally
+        {
+            SetBusy(null);
+            await RefreshAsync();
+        }
+    }
+
+    /// <summary>Names the phase and, while writing, how much of the free space has been written over.</summary>
+    private void ReportWipeProgress(WipeProgress progress)
+    {
+        if (!IsBusy || _cancellation!.IsCancellationRequested)
+            return;
+
+        var writing = progress.Phase == WipePhase.WritingFreeSpace;
+        ShredProgressBar.IsIndeterminate = !writing || progress.TotalBytes == 0;
+        ShredProgressBar.Value = writing ? progress.Fraction : 0;
+        ProgressPercent.Text = writing ? progress.Fraction.ToString("P0") : string.Empty;
+        ProgressDetail.Text = progress.Phase switch
+        {
+            WipePhase.WritingFreeSpace => $"Writing over free space · {FileEntry.FormatBytes(progress.BytesWritten)} of {FileEntry.FormatBytes(progress.TotalBytes)}",
+            WipePhase.CleaningFileTable => $"Cleaning the file table · {Pluralize(progress.FileTableEntries, "entry")}",
+            _ => "Removing the wipe files",
+        };
+    }
+
+    private void ShowWipeResult(FileEntry entry, WipeResult result)
+    {
+        var summary = $"Free space on {DriveLetter(entry)} was written over. {FileEntry.FormatBytes(result.BytesWritten)} written.";
+        if (result.FileTableCleaned)
+            summary += " The file table was cleaned too.";
+
+        ShowStatus(InfoBarSeverity.Success, "Wipe complete", summary);
+    }
+
+    /// <summary>The Windows drive is the one Windows itself is installed on.</summary>
+    private static bool IsWindowsDrive(FileEntry entry) =>
+        Environment.SystemDirectory.Length > 0
+        && string.Equals(Path.GetPathRoot(entry.FullPath), Path.GetPathRoot(Environment.SystemDirectory), StringComparison.OrdinalIgnoreCase);
+
+    private static string DriveLetter(FileEntry entry) =>
+        Path.GetPathRoot(entry.FullPath)?.TrimEnd(Path.DirectorySeparatorChar) ?? entry.Name;
+
+    #endregion
+
+    private void SetBusy(CancellationTokenSource? cancellation, string progressTitle = "Shredding…")
     {
         _cancellation = cancellation;
         var busy = cancellation is not null;
@@ -546,6 +662,7 @@ public sealed partial class MainWindow : Window
         CancelButton.IsEnabled = busy;
         PassesBox.IsEnabled = QueueList.IsEnabled = !busy;
         ShredProgressBar.IsIndeterminate = true;
+        ProgressTitle.Text = progressTitle;
         ProgressPercent.Text = string.Empty;
         ProgressDetail.Text = "Preparing…";
         UpdateCommands();
@@ -556,6 +673,10 @@ public sealed partial class MainWindow : Window
         var selected = BrowserList.SelectedItems.Count;
         SelectionText.Text = selected == 0 ? string.Empty : $"{Pluralize(selected, "item")} selected";
         AddButton.IsEnabled = selected > 0 && !IsBusy;
+
+        // Wiping free space needs exactly one drive that PermaDel is allowed to write to.
+        var canWipe = !IsBusy && BrowserList.SelectedItems is [FileEntry entry] && WipeInfo(entry)?.CanWipe == true;
+        WipeButton.Visibility = canWipe ? Visibility.Visible : Visibility.Collapsed;
 
         QueueSummary.Text = _queue.Count == 0 ? "Empty" : Pluralize(_queue.Count, "item");
         QueuePlaceholder.Visibility = _queue.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
