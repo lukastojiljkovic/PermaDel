@@ -58,7 +58,7 @@ internal static class Releases
     public const string PageUrl = "https://github.com/lukastojiljkovic/PermaDel/releases/tag/v1.2.0";
 
     /// <summary>A release payload with the installer and, optionally, the sidecar asset.</summary>
-    public static string Json(string tag, bool sidecar = true, string? installerUrl = null)
+    public static string Json(string tag, bool sidecar = true, string? installerUrl = null, string? publishedAt = null)
     {
         var version = tag.TrimStart('v');
         var installer = $"PermaDel-{version}-Setup.exe";
@@ -68,7 +68,8 @@ internal static class Releases
             (sidecar
                 ? $$""",{"name":"{{installer}}.sha256","browser_download_url":"{{url}}.sha256"}"""
                 : string.Empty);
-        return $$"""{"tag_name":"{{tag}}","body":"* something fixed","html_url":"{{PageUrl}}","assets":[{{assets}}]}""";
+        var published = publishedAt is null ? string.Empty : $",\"published_at\":\"{publishedAt}\"";
+        return $$"""{"tag_name":"{{tag}}"{{published}},"body":"* something fixed","html_url":"{{PageUrl}}","assets":[{{assets}}]}""";
     }
 
     public static HttpResponseMessage JsonResponse(string body, HttpStatusCode status = HttpStatusCode.OK) =>
@@ -83,7 +84,8 @@ internal static class Releases
         installerName,
         $"{baseUrl}/installer",
         sidecar ? installerName + ".sha256" : null,
-        sidecar ? $"{baseUrl}/sidecar" : null);
+        sidecar ? $"{baseUrl}/sidecar" : null,
+        null);
 }
 
 /// <summary>

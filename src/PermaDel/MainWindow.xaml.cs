@@ -40,6 +40,8 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? _cancellation;
     private ReleaseInfo? _availableRelease;
     private CancellationTokenSource? _updateDownload;
+    private readonly string? _previousRunVersion;
+    private readonly bool _ranBefore;
 
     /// <param name="request">Items to shred right away, when PermaDel was started from the File Explorer context menu.</param>
     public MainWindow(ShredRequest? request = null)
@@ -48,6 +50,11 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         ConfigureWindow();
         ApplyTheme(AppSettings.Theme);
+
+        // Read before the startup check runs: it writes LastUpdateCheckUtc, which is what marks a
+        // version released before this feature as an update rather than a fresh install.
+        _previousRunVersion = AppSettings.LastRunVersion;
+        _ranBefore = _previousRunVersion is not null || AppSettings.LastUpdateCheckUtc is not null;
 
         PassesBox.Minimum = Shredder.MinPasses;
         PassesBox.Maximum = Shredder.MaxPasses;
@@ -63,7 +70,8 @@ public sealed partial class MainWindow : Window
             _ = Updates.CheckOnStartupAsync();
             try
             {
-                await InitializeAsync();
+                var showedUpdatedNotes = await ShowUpdatedNotesAsync();
+                await InitializeAsync(showWelcome: !showedUpdatedNotes);
             }
             catch (Exception ex)
             {
@@ -79,6 +87,10 @@ public sealed partial class MainWindow : Window
     private enum History { Record, Back, Forward, Keep }
 
     private bool IsBusy => _cancellation is not null;
+
+    private bool CanUpdate => !IsBusy && _updateDownload is null;
+
+    private DialogService Dialogs => new(Root.XamlRoot, Root.ActualTheme);
 
     private nint WindowHandle => Win32Interop.GetWindowFromWindowId(AppWindow.Id);
 
@@ -113,7 +125,7 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    private async Task InitializeAsync()
+    private async Task InitializeAsync(bool showWelcome)
     {
         NavView.MenuItems.Add(CreateNavigationItem("This PC", "\uE977", null));
         NavView.MenuItems.Add(new NavigationViewItemSeparator());
@@ -126,7 +138,7 @@ public sealed partial class MainWindow : Window
         if (_request is null)
         {
             await NavigateAsync(null);
-            if (AppSettings.ShowWelcome)
+            if (showWelcome && AppSettings.ShowWelcome)
                 await ShowWelcomeAsync();
             return;
         }
@@ -568,25 +580,76 @@ public sealed partial class MainWindow : Window
             ShowUpdateAvailable(release);
     }
 
+    /// <summary>
+    /// Shows what changed on the first launch after an update, and records the
+    /// version that is now running so it is shown only once. A launch from the
+    /// File Explorer menu is about the files it brought, so it neither shows nor
+    /// records anything, and the user's own next launch still gets the notes.
+    /// </summary>
+    private async Task<bool> ShowUpdatedNotesAsync()
+    {
+        if (_request is not null)
+            return false;
+
+        // Recorded before the dialog opens, so closing the window over it cannot
+        // make the next launch report an update that did not happen. A fresh
+        // install records its version silently.
+        var current = AppVersion.Current;
+        AppSettings.LastRunVersion = current.ToString(3);
+
+        var notes = ReadChangelogNotes(current);
+        if (!ShouldShowUpdatedNotes(current, notes))
+            return false;
+        await UpdatePrompts.ShowInstalledNotesAsync(Dialogs, current, notes);
+        return true;
+    }
+
+    private bool ShouldShowUpdatedNotes(Version current, ReleaseNotes notes)
+    {
+#if DEBUG
+        if (Environment.GetEnvironmentVariable("PERMADEL_SHOW_UPDATED_NOTES") == "1")
+            return true;
+#endif
+        return !notes.IsEmpty
+            && _ranBefore
+            && (_previousRunVersion is null || !Version.TryParse(_previousRunVersion, out var previous) || previous < current);
+    }
+
+    /// <summary>The changelog embedded in the app, or empty notes when it is missing.</summary>
+    private static ReleaseNotes ReadChangelogNotes(Version version)
+    {
+        try
+        {
+            using var stream = typeof(App).Assembly.GetManifestResourceStream("CHANGELOG.md");
+            if (stream is null)
+                return new ReleaseNotes([]);
+            using var reader = new StreamReader(stream);
+            return ReleaseNotes.FromChangelog(reader.ReadToEnd(), version) ?? new ReleaseNotes([]);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ReleaseNotes([]);
+        }
+    }
+
     internal void ShowUpdateAvailable(ReleaseInfo release)
     {
         _availableRelease = release;
         UpdateBar.Title = $"PermaDel {release.Version.ToString(3)} is available";
-        UpdateBar.Message = $"You are running PermaDel {Updates.CurrentVersion.ToString(3)}.";
+        UpdateBar.Message = $"You have PermaDel {Updates.CurrentVersion.ToString(3)}.";
         UpdateBar.IsOpen = true;
         RefreshUpdateActions();
     }
 
     /// <summary>An update cannot start while a shred is in progress.</summary>
-    private void RefreshUpdateActions() =>
-        UpdateInstallButton.IsEnabled = !IsBusy && _updateDownload is null;
+    private void RefreshUpdateActions() => UpdateInstallButton.IsEnabled = CanUpdate;
 
     private void OnUpdateBarClosed(InfoBar sender, object args) => _availableRelease = null;
 
     private async void OnUpdateNotesClick(object sender, RoutedEventArgs e)
     {
-        if (_availableRelease is { } release)
-            await UpdateDialogs.ShowReleaseNotesAsync(Root.XamlRoot, Root.ActualTheme, release);
+        if (_availableRelease is { } release && await UpdatePrompts.ShowReleaseNotesAsync(Dialogs, release, CanUpdate))
+            await DownloadUpdateAsync(release);
     }
 
     private async void OnUpdateInstallClick(object sender, RoutedEventArgs e)
@@ -658,7 +721,7 @@ public sealed partial class MainWindow : Window
         StatusBar.IsOpen = false;
         if (!result.Success)
         {
-            await UpdateDialogs.ShowUpdateFailureAsync(Root.XamlRoot, Root.ActualTheme, result.Error ?? "The installer could not be downloaded.", result.ReleasePageUrl);
+            await UpdatePrompts.ShowUpdateFailureAsync(Dialogs, result.Error ?? "The installer could not be downloaded.", result.ReleasePageUrl);
             return;
         }
 
@@ -671,7 +734,7 @@ public sealed partial class MainWindow : Window
                 ShowStatus(InfoBarSeverity.Informational, "Update cancelled", "Windows did not get permission to run the installer.");
                 break;
             default:
-                await UpdateDialogs.ShowUpdateFailureAsync(Root.XamlRoot, Root.ActualTheme, "The installer could not be started.", release.PageUrl);
+                await UpdatePrompts.ShowUpdateFailureAsync(Dialogs, "The installer could not be started.", release.PageUrl);
                 break;
         }
     }

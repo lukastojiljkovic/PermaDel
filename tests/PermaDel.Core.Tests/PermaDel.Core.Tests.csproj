@@ -16,4 +16,8 @@
     <ProjectReference Include="..\..\src\PermaDel.Core\PermaDel.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\CHANGELOG.md" Link="CHANGELOG.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
