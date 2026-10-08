@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using PermaDel.Core.Metadata;
 
@@ -306,6 +307,19 @@ public sealed class MetadataCleanerTests
     }
 
     [Fact]
+    public void Docx_ReportsAndCleansAPictureWhoseNameSaysNothing()
+    {
+        var (photo, cleanedPhoto) = MetadataFixtures.Jpeg();
+        var original = MetadataFixtures.Docx(withMetadata: false, picture: photo, picturePart: "word/media/image1.bin");
+
+        var inspection = Inspect(original, "report.docx");
+        var cleaned = Clean(original, "report.docx");
+
+        Assert.Equal(Inspect(photo, "photo.jpg").Categories, inspection.Categories);
+        Assert.Equal(cleanedPhoto, MetadataFixtures.ReadPart(cleaned, "word/media/image1.bin"));
+    }
+
+    [Fact]
     public void Docx_RefusesAPictureThatExpandsPastTheLimit()
     {
         var package = MetadataFixtures.DocxWithExpandingPicture(OoxmlMetadataCleaner.MaxBufferedLength + 1L);
@@ -322,6 +336,42 @@ public sealed class MetadataCleanerTests
         var cleaned = Clean(MetadataFixtures.Docx(withMetadata: true, picture: drawing), "report.docx");
 
         Assert.Equal(drawing, MetadataFixtures.ReadPart(cleaned, MetadataFixtures.PicturePart));
+    }
+
+    [Fact]
+    public void Docx_CopiesALargeMediaEntryItCannotCleanAsItIs()
+    {
+        var length = OoxmlMetadataCleaner.MaxBufferedLength + 1L;
+        var package = MetadataFixtures.DocxWithLargeMedia(length, "word/media/media1.mp4");
+        var root = Directory.CreateTempSubdirectory("PermaDelMedia-");
+        try
+        {
+            var path = Path.Combine(root.FullName, "media.docx");
+            using (var source = new MemoryStream(package))
+            using (var output = File.Create(path))
+                MetadataCleaner.Clean(source, output, MetadataFormat.OfficeOpenXml);
+
+            using var file = File.OpenRead(path);
+            using var archive = new ZipArchive(file, ZipArchiveMode.Read);
+            var entry = archive.Entries.Single(entry => entry.FullName == "word/media/media1.mp4");
+            Assert.Equal(length, entry.Length);
+
+            using var content = entry.Open();
+            var prefix = new byte[64];
+            var read = 0;
+            while (read < prefix.Length)
+            {
+                var count = content.Read(prefix, read, prefix.Length - read);
+                if (count <= 0)
+                    break;
+                read += count;
+            }
+            Assert.Equal(MetadataFixtures.MediaPattern(prefix.Length), prefix);
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
     }
 
     [Fact]

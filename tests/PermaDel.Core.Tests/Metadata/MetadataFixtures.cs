@@ -79,9 +79,9 @@ internal static class MetadataFixtures
 
     /// <summary>
     /// An Office Open XML package with core, extended, custom and document parts, or without the personal ones,
-    /// and <paramref name="picture"/> at <see cref="PicturePart"/> when one is given.
+    /// and <paramref name="picture"/> at <paramref name="picturePart"/> when one is given.
     /// </summary>
-    public static byte[] Docx(bool withMetadata, byte[]? picture = null)
+    public static byte[] Docx(bool withMetadata, byte[]? picture = null, string picturePart = PicturePart)
     {
         using var package = new MemoryStream();
         using (var archive = new ZipArchive(package, ZipArchiveMode.Create, leaveOpen: true))
@@ -94,12 +94,15 @@ internal static class MetadataFixtures
             if (withMetadata)
                 Add(archive, "docProps/custom.xml", Custom());
             if (picture is not null)
-                Add(archive, PicturePart, picture);
+                Add(archive, picturePart, picture);
         }
         return package.ToArray();
     }
 
-    /// <summary>An Office package whose picture expands to <paramref name="length"/> zero bytes but stays small on disk.</summary>
+    /// <summary>
+    /// An Office package whose picture starts like a JPEG and then expands to <paramref name="length"/> bytes of
+    /// zeros, so it stays small on disk while looking like a picture by its contents.
+    /// </summary>
     public static byte[] DocxWithExpandingPicture(long length)
     {
         using var package = new MemoryStream();
@@ -107,11 +110,41 @@ internal static class MetadataFixtures
         {
             Add(archive, "[Content_Types].xml", ContentTypes(withMetadata: false));
             var chunk = new byte[1024 * 1024];
+            chunk[0] = 0xFF;
+            chunk[1] = 0xD8;
+            chunk[2] = 0xFF;
             using var stream = archive.CreateEntry(PicturePart).Open();
             for (long written = 0; written < length; written += chunk.Length)
                 stream.Write(chunk, 0, (int)Math.Min(chunk.Length, length - written));
         }
         return package.ToArray();
+    }
+
+    /// <summary>
+    /// An Office package whose entry at <paramref name="part"/> is <paramref name="length"/> bytes of a repeated
+    /// non-picture pattern, written in chunks so the fixture stays small on disk.
+    /// </summary>
+    public static byte[] DocxWithLargeMedia(long length, string part)
+    {
+        using var package = new MemoryStream();
+        using (var archive = new ZipArchive(package, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            Add(archive, "[Content_Types].xml", ContentTypes(withMetadata: false));
+            var chunk = MediaPattern(1024 * 1024);
+            using var stream = archive.CreateEntry(part).Open();
+            for (long written = 0; written < length; written += chunk.Length)
+                stream.Write(chunk, 0, (int)Math.Min(chunk.Length, length - written));
+        }
+        return package.ToArray();
+    }
+
+    /// <summary>The non-picture byte pattern the large media fixture repeats, <paramref name="length"/> bytes of it.</summary>
+    public static byte[] MediaPattern(int length)
+    {
+        var pattern = new byte[length];
+        for (var index = 0; index < length; index++)
+            pattern[index] = (byte)(index % 251);
+        return pattern;
     }
 
     /// <summary>The decompressed bytes of one part of an Office package, or null when the package has no such part.</summary>

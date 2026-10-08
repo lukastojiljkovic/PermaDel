@@ -30,7 +30,8 @@ internal static class OoxmlMetadataCleaner
     /// </summary>
     internal const int MaxBufferedLength = 256 * 1024 * 1024;
 
-    private static readonly string[] PictureExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+    /// <summary>The bytes needed to tell the kinds of media apart: the longest signature PermaDel knows.</summary>
+    private const int HeaderLength = 12;
 
     private static readonly XNamespace CoreProperties = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     private static readonly XNamespace DublinCore = "http://purl.org/dc/elements/1.1/";
@@ -123,7 +124,14 @@ internal static class OoxmlMetadataCleaner
     /// <summary>A picture pasted into a document keeps its own metadata, such as where a photo was taken.</summary>
     private static void InspectPicture(ZipArchiveEntry entry, FoundMetadata found)
     {
-        using var picture = Buffer(entry);
+        using var stream = entry.Open();
+        var header = new byte[HeaderLength];
+        var count = ReadHeader(stream, header);
+        using var head = new MemoryStream(header, 0, count);
+        if (MetadataCleaner.Detect(head, fileName: null) is not (MetadataFormat.Jpeg or MetadataFormat.Png or MetadataFormat.WebP))
+            return;
+
+        using var picture = Buffer(stream, header.AsSpan(0, count));
         var inspection = MetadataCleaner.Inspect(picture, fileName: null);
         foreach (var category in inspection.Categories)
             found.Add(category);
@@ -131,16 +139,25 @@ internal static class OoxmlMetadataCleaner
             found.NeedsRotation = true;
     }
 
-    /// <summary>Cleans a JPEG, PNG or WebP picture; one whose contents are not what its name says is copied as it was.</summary>
+    /// <summary>
+    /// Cleans a JPEG, PNG or WebP picture. A media entry holding anything else, such as a video, is copied as
+    /// it was without being read past its header.
+    /// </summary>
     private static void CleanPicture(Stream input, Stream output)
     {
-        using var picture = Buffer(input);
-        var format = MetadataCleaner.Detect(picture, fileName: null);
-        picture.Position = 0;
-        if (format == MetadataFormat.Unsupported)
-            picture.CopyTo(output);
-        else
-            MetadataCleaner.Clean(picture, output, format);
+        var header = new byte[HeaderLength];
+        var count = ReadHeader(input, header);
+        using var head = new MemoryStream(header, 0, count);
+        var format = MetadataCleaner.Detect(head, fileName: null);
+        if (format is not (MetadataFormat.Jpeg or MetadataFormat.Png or MetadataFormat.WebP))
+        {
+            output.Write(header, 0, count);
+            input.CopyTo(output);
+            return;
+        }
+
+        using var picture = Buffer(input, header.AsSpan(0, count));
+        MetadataCleaner.Clean(picture, output, format);
     }
 
     private static void CopyOrEdit(string name, bool dropCustomPart, Stream input, Stream output)
@@ -250,9 +267,16 @@ internal static class OoxmlMetadataCleaner
     }
 
     /// <summary>Reads a part into memory, refusing one that expands past <see cref="MaxBufferedLength"/>.</summary>
-    private static MemoryStream Buffer(Stream input)
+    private static MemoryStream Buffer(Stream input) => Buffer(input, ReadOnlySpan<byte>.Empty);
+
+    /// <summary>
+    /// Reads a part into memory after <paramref name="prefix"/> bytes were already read, refusing one that
+    /// expands past <see cref="MaxBufferedLength"/>.
+    /// </summary>
+    private static MemoryStream Buffer(Stream input, ReadOnlySpan<byte> prefix)
     {
         var buffer = new MemoryStream();
+        buffer.Write(prefix);
         var chunk = new byte[81920];
         int read;
         while ((read = input.Read(chunk)) > 0)
@@ -265,6 +289,20 @@ internal static class OoxmlMetadataCleaner
         return buffer;
     }
 
+    /// <summary>Reads up to <see cref="HeaderLength"/> bytes, stopping at the end of a shorter part.</summary>
+    private static int ReadHeader(Stream input, byte[] header)
+    {
+        var read = 0;
+        while (read < header.Length)
+        {
+            var count = input.Read(header, read, header.Length - read);
+            if (count <= 0)
+                break;
+            read += count;
+        }
+        return read;
+    }
+
     private static string? Value(XDocument document, XName name) => document.Root?.Element(name)?.Value;
 
     private static bool IsFilled(string? value) => !string.IsNullOrWhiteSpace(value);
@@ -274,12 +312,12 @@ internal static class OoxmlMetadataCleaner
     private static bool IsCustomPartName(string? partName) => partName is not null && IsPart(partName, CustomPart);
 
     /// <summary>
-    /// Word, Excel and PowerPoint keep pictures, videos and sounds in a <c>media</c> folder and name each for its
-    /// type, such as <c>word/media/image1.jpeg</c>. Only the pictures PermaDel can clean are read.
+    /// Word, Excel and PowerPoint keep pictures, videos and sounds in a <c>media</c> folder, and a part's name
+    /// does not always match its contents. Every entry there is a candidate, whatever it is named; its first
+    /// bytes decide what it holds.
     /// </summary>
     private static bool IsPicture(string name) =>
-        name.Replace('\\', '/').Contains("/media/", StringComparison.OrdinalIgnoreCase)
-        && PictureExtensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase);
+        name.Replace('\\', '/').Contains("/media/", StringComparison.OrdinalIgnoreCase);
 
     private static ZipArchiveEntry? FindEntry(ZipArchive archive, string name) =>
         archive.Entries.FirstOrDefault(entry => IsPart(entry.FullName, name));
