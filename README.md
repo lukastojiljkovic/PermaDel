@@ -35,7 +35,7 @@ the download, compare its SHA-256 hash with the one on the release page, then ch
   - Turning it on or off also requires verification, and the installer asks whether to enable it.
 - **Configurable passes.** Choose 1–35 overwrite passes of cryptographically secure random data.
 - **Settings:** default pass count, confirmation prompt, identity verification, context menu integration, theme and
-  welcome screen.
+  welcome screen, and the automatic update check.
 - **Thorough destruction:**
   - every pass is flushed to the physical disk (`FlushFileBuffers`)
   - NTFS alternate data streams are overwritten too
@@ -60,6 +60,15 @@ the download, compare its SHA-256 hash with the one on the release page, then ch
   - Files that can't be shredded keep their original attributes.
   - A welcome screen explains what the app does, and a confirmation dialog appears before anything is destroyed.
 - **Transparent.** Live progress with cancellation, plus a report listing every item that couldn't be shredded and why.
+- **Wipe free space.** On a drive in This PC, write random data over all of the drive's free space and then remove it
+  again, so files you deleted the ordinary way can't be read back. Your existing files are never touched. On NTFS, small
+  files that live inside the file table can be overwritten too.
+- **Remove metadata.** See what a JPEG, PNG or WebP photo, or a Word, Excel or PowerPoint file, holds — where a photo was
+  taken, the camera, the author, the company and the rest — then write a cleaned copy next to it or replace the original.
+  Pictures inside Office files are cleaned too, and a file is only written once the cleaned version passes a check.
+- **Readable update notes.** PermaDel checks GitHub for a newer release when it starts (at most once a day) and from
+  Settings, and shows what changed in plain words. After it updates, it shows that once, the next time you open it, but
+  never when it was opened from the File Explorer menu.
 
 By default, PermaDel asks before anything is destroyed, and checks it's you when verification is on:
 
@@ -83,6 +92,29 @@ PermaDel first scans every selected item, walking directory trees children-first
 Folders are renamed, scrubbed and deleted once they are empty. If any item inside a folder can't be shredded, the folder
 is kept under its original name and the failure is reported. Renames and deletes are retried briefly, because
 antivirus scanners and the search indexer often open files right after they're written.
+
+### Wiping a drive's free space
+
+Windows only marks a deleted file's space as free, so its contents stay on the disk until something overwrites them.
+**Wipe free space**, on a drive in This PC, writes random data over every byte of that drive's free space and then
+removes it again. PermaDel only ever creates and deletes one folder of its own at the root of the drive; nothing outside
+it is written and existing files are never touched. The wipe keeps writing full-size files until the drive is full and
+then halves each new file down to a single cluster, so the scattered gaps between files are covered too. On NTFS it can
+also fill the file table's free entries, where small files live, with files whose contents fit inside the table itself.
+The wipe folder is removed even when the wipe is cancelled or fails, and any wipe folder a crash left behind is removed
+the next time PermaDel starts. While a wipe runs the drive is full for a moment, and on the Windows drive Windows and
+other apps may slow down until it ends.
+
+### Removing metadata
+
+Photos and documents carry details their owner may not want to share: where a photo was taken, the camera, the author,
+the company. For a selected JPEG, PNG or WebP photo, or a Word, Excel or PowerPoint file, PermaDel shows what the file
+holds and then writes a cleaned version next to it (named `name (clean)`) or replaces the original. Each file is
+rewritten byte for byte apart from the parts that carry metadata, so nothing is decoded or re-encoded and the picture or
+document itself is unchanged. Inside Office files, the JPEG, PNG and WebP pictures in the document's media folders are
+cleaned the same way, and the author, last-saved-by, company, manager and custom-properties parts are emptied or dropped.
+A cleaned file is written to a temporary file and checked before it takes the place of the original, so a file that
+can't be cleaned safely is left as it was.
 
 ### File Explorer integration
 
@@ -129,6 +161,9 @@ The unit tests (`tests/PermaDel.Core.Tests`) cover:
 - locked files, which must keep their attributes
 - missing paths
 - cancellation
+- wiping free space, including a volume that fills up, cancellation, and wipe folders a crash left behind
+- reading and cleaning metadata in JPEG, PNG, WebP and Office files
+- parsing release notes into user-facing groups
 
 The forensic test checks the result on a real file system:
 
@@ -167,6 +202,31 @@ in these situations:
 - **Locked or privileged files.** Files that are in use or need administrator rights are skipped and reported. Close
   the owning application, or run PermaDel as administrator.
 
+Wiping a drive's free space only reaches what a new file can be written over:
+
+- **Solid-state drives and flash media.** The drive decides where writes land, so its spare cells are out of reach.
+  For SSDs, BitLocker from the start is the reliable protection.
+- **Space that is still in use.** Free space is only what is free now, so older copies held by System Restore points or
+  Volume Shadow Copies, and the unused tail of existing files, are out of reach.
+- **Which drives can be wiped.** PermaDel offers it on fixed and removable drives formatted NTFS, exFAT or FAT32, and
+  only when the drive is writable.
+
+Removing metadata has its own limits:
+
+- **Some formats only.** JPEG, PNG and WebP photos, and Word, Excel and PowerPoint files. Anything else is listed as a
+  kind PermaDel can't clean yet.
+- **Inside Office files, only the pictures.** JPEG, PNG and WebP pictures in a document's media folders are cleaned, and
+  the author, company and custom-properties parts are emptied or dropped. Other embedded files, such as videos, are left
+  as they are.
+- **Comments and tracked changes stay.** They are document content, and PermaDel leaves them in along with the names
+  they carry. Remove them in the Office app first.
+- **Orientation.** Removing a photo's metadata removes its orientation tag, so a photo that relied on it may show
+  sideways in some apps.
+- **The original's bytes.** Replacing an original, rather than keeping a copy, leaves its old bytes in the drive's free
+  space until Windows reuses them. Wipe free space afterwards if they must not be recoverable.
+- **Very large parts.** A document part that would expand past 256 MB is not read, so the file is left as it was and
+  reported as one that could not be cleaned safely.
+
 ## Building
 
 Requirements:
@@ -191,7 +251,7 @@ dotnet test tests/PermaDel.Core.Tests --filter "Category!=Forensics"
 ## Project structure
 
 ```text
-src/PermaDel.Core            Shredding engine (UI-independent, unit and forensically tested)
+src/PermaDel.Core            Shredding, free-space wiping and metadata cleaning (UI-independent, unit tested)
 src/PermaDel                 WinUI 3 desktop app
 src/PermaDel.ShellExtension  Native IExplorerCommand for the Windows 11 context menu + sparse package manifest
 tests/PermaDel.Core.Tests    xUnit unit tests and the forensic virtual disk test
@@ -202,7 +262,8 @@ build.ps1                    Test, publish and package pipeline
 ## Legal
 
 - [Terms of Use](TERMS.md). The installer asks you to accept them.
-- [Privacy statement](PRIVACY.md). PermaDel collects no data; the only request it makes itself is the update check.
+- [Privacy statement](PRIVACY.md). PermaDel collects no data; it reads the files you select only on your own PC, and the
+  only request it makes itself is the update check.
 - [Third-party notices](THIRD-PARTY-NOTICES.md)
 - [Contributing](CONTRIBUTING.md): how to build, test and change the shredder safely
 - [Code of Conduct](CODE_OF_CONDUCT.md)
